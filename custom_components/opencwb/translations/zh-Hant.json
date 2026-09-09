@@ -1,37 +1,62 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "\u5ea7\u6a19\u5df2\u7d93\u8a2d\u5b9a\u5b8c\u6210"
-        },
-        "error": {
-            "cannot_connect": "\u9023\u7dda\u5931\u6557",
-            "invalid_api_key": "API \u5bc6\u9470\u7121\u6548",
-			"invalid_location_name": "\u7121\u6548\u7684\u7e23\u5e02\u9109\u93ae\u540d\u7a31"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "api_key": "API \u5bc6\u9470",
-                    "language": "\u8a9e\u8a00",
-                    "location_name": "\u9109\u93ae\u540d\u7a31",
-                    "latitude": "\u7def\u5ea6",
-                    "longitude": "\u7d93\u5ea6",
-                    "mode": "\u6a21\u5f0f",
-                    "name": "\u6574\u5408\u540d\u7a31"
-                },
-                "description": "\u6b32\u8a2d\u5b9a OpenCWB \u6574\u5408\u3002\u8acb\u81f3 https://opendata.cwa.gov.tw/devManual/insrtuction \u7522\u751f API \u5bc6\u9470. \u95dc\u65bc \u9109\u93ae\u540d\u7a31, \u8acb\u53c3\u95b1 https://opendata.cwa.gov.tw/opendatadoc/Opendata_City.pdf",
-                "title": "OpenCWB"
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "座標已經設定完成",
+      "reauth_successful": "API 金鑰已更新。"
     },
-    "options": {
-        "step": {
-            "init": {
-                "data": {
-                    "language": "\u8a9e\u8a00",
-                    "mode": "\u6a21\u5f0f"
-                }
-            }
+    "error": {
+      "cannot_connect": "連線失敗",
+      "invalid_api_key": "API 密鑰無效",
+      "invalid_location_name": "請輸入有效的縣市／鄉鎮名稱；重名地點請加上縣市。",
+      "invalid_data": "CWA 回傳的預報資料無效或不完整。"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "API 密鑰",
+          "language": "語言",
+          "location_name": "縣市／鄉鎮名稱",
+          "latitude": "緯度",
+          "longitude": "經度",
+          "mode": "模式",
+          "name": "整合名稱"
+        },
+        "description": "使用 CWA 開放資料 API 金鑰設定整合。一週預報為白天／晚上兩個時段。",
+        "title": "OpenCWA"
+      },
+      "reauth_confirm": {
+        "title": "更新 CWA API 金鑰",
+        "data": {
+          "api_key": "API 金鑰"
         }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "language": "語言",
+          "mode": "模式"
+        },
+        "description": "原有 daily 模式現提供日／夜預報。天氣卡片請選擇 twice_daily；逐小時模式使用 hourly。"
+      }
+    },
+    "error": {
+      "cannot_connect": "連線失敗",
+      "invalid_api_key": "API 密鑰無效",
+      "invalid_location_name": "請輸入有效的縣市／鄉鎮名稱；重名地點請加上縣市。",
+      "invalid_data": "CWA 回傳的預報資料無效或不完整。"
+    }
+  },
+  "selector": {
+    "forecast_mode": {
+      "options": {
+        "daily": "一週日／夜預報（原 daily）",
+        "onecall_daily": "一週日／夜預報",
+        "hourly": "短期逐時預報（原 hourly）",
+        "onecall_hourly": "短期逐時預報"
+      }
+    }
+  }
 }

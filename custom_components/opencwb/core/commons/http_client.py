@@ -142,28 +142,40 @@ class HttpClient:
         self.admits_subdomains = admits_subdomains
 
     def get_json(self, path, params=None, headers=None):
-        builder = HttpRequestBuilder(self.root_uri, self.api_key, self.config, has_subdomains=self.admits_subdomains)\
-            .with_path(path)\
-            .with_api_key()\
-            .with_language()\
-            .with_query_params(params if params is not None else dict())\
-            .with_headers(headers if headers is not None else dict())
-        url, params, headers, proxies = builder.build()
+        """Read CWA JSON with verified TLS and credential-safe failures."""
+        query = dict(params or {})
+        query.update({"Authorization": self.api_key, "format": "JSON"})
+        url = f"https://{self.root_uri}/{path}"
+        proxies = self.config["proxies"] if self.config["connection"]["use_proxy"] else {}
         try:
-            resp = requests.get(url, params=params, headers=headers, proxies=proxies,
-                                timeout=self.config['connection']['timeout_secs'],
-                                verify=self.config['connection']['verify_ssl_certs'])
-        except requests.exceptions.SSLError as e:
-            raise exceptions.InvalidSSLCertificateError(str(e))
-        except requests.exceptions.ConnectionError as e:
-            raise exceptions.InvalidSSLCertificateError(str(e))
+            response = requests.get(
+                url, params=query, headers=headers, proxies=proxies,
+                timeout=self.config["connection"]["timeout_secs"],
+                verify=True, allow_redirects=False,
+            )
+        except requests.exceptions.SSLError:
+            raise exceptions.InvalidSSLCertificateError("CWA TLS verification failed") from None
         except requests.exceptions.Timeout:
-            raise exceptions.TimeoutError('API call timeouted')
-        HttpClient.check_status_code(resp.status_code, resp.text)
+            raise exceptions.TimeoutError("CWA request timed out") from None
+        except requests.exceptions.RequestException:
+            raise exceptions.APIRequestError("CWA connection failed") from None
         try:
-            return resp.status_code, resp.json()
-        except:
-            raise exceptions.ParseAPIResponseError('Impossible to parse API response data')
+            status = response.status_code
+            if status in (401, 403):
+                raise exceptions.UnauthorizedError("CWA authorization failed")
+            if status == 404:
+                raise exceptions.NotFoundError("CWA dataset not found")
+            if status < 200 or status >= 300:
+                raise exceptions.APIRequestError(f"CWA HTTP {status}")
+            try:
+                payload = response.json()
+            except ValueError:
+                raise exceptions.ParseAPIResponseError("Invalid CWA JSON response") from None
+            if not isinstance(payload, dict):
+                raise exceptions.ParseAPIResponseError("Expected a CWA JSON object")
+            return status, payload
+        finally:
+            response.close()
 
     def get_png(self, path, params=None, headers=None):
         builder = HttpRequestBuilder(self.root_uri, self.api_key, self.config, has_subdomains=self.admits_subdomains)\

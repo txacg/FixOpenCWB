@@ -80,7 +80,7 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
             FORECAST_MODE_DAILY,
             FORECAST_MODE_ONECALL_DAILY,
         ):
-            self._attr_supported_features = WeatherEntityFeature.FORECAST_DAILY
+            self._attr_supported_features = WeatherEntityFeature.FORECAST_TWICE_DAILY
         else:  # FORECAST_MODE_DAILY or FORECAST_MODE_ONECALL_HOURLY
             self._attr_supported_features = WeatherEntityFeature.FORECAST_HOURLY
 
@@ -100,11 +100,8 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
         return self._weather_coordinator.last_update_success
 
     async def async_added_to_hass(self):
-        """Connect to dispatcher listening for entity data notifications."""
-        self.async_on_remove(
-            self._weather_coordinator.async_add_listener(
-                self.async_write_ha_state)
-        )
+        """Register the base listener that updates state AND forecast subscribers."""
+        await super().async_added_to_hass()
 
     @property
     def cloud_coverage(self) -> float | None:
@@ -151,17 +148,12 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
         """Return the wind bearing."""
         return self._weather_coordinator.data[ATTR_API_WIND_BEARING]
 
-    @property
-    def forecast(self) -> list[Forecast] | None:
-        """Return the forecast array."""
-        return self._weather_coordinator.data[ATTR_API_FORECAST]
-
     @callback
-    def _async_forecast_daily(self) -> list[Forecast] | None:
-        """Return the daily forecast in native units."""
-        return self.forecast
+    def _async_forecast_twice_daily(self) -> list[Forecast] | None:
+        """Return CWA's 12-hour day/night intervals in native units."""
+        return self._weather_coordinator.data[ATTR_API_FORECAST]
 
     @callback
     def _async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast in native units."""
-        return self.forecast
+        return self._weather_coordinator.data[ATTR_API_FORECAST]

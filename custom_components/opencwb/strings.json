@@ -1,35 +1,62 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_location%]"
-        },
-        "error": {
-            "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
-            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "api_key": "[%key:common::config_flow::data::api_key%]",
-                    "language": "Language",
-                    "latitude": "[%key:common::config_flow::data::latitude%]",
-                    "longitude": "[%key:common::config_flow::data::longitude%]",
-                    "mode": "[%key:common::config_flow::data::mode%]",
-                    "name": "Name of the integration"
-                },
-                "description": "Set up OpenWeatherMap integration. To generate API key go to https://openweathermap.org/appid",
-                "title": "OpenWeatherMap"
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_location%]",
+      "reauth_successful": "API key updated successfully."
     },
-    "options": {
-        "step": {
-            "init": {
-                "data": {
-                    "language": "Language",
-                    "mode": "[%key:common::config_flow::data::mode%]"
-                }
-            }
+    "error": {
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
+      "invalid_data": "CWA returned invalid or incomplete forecast data."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "[%key:common::config_flow::data::api_key%]",
+          "language": "Language",
+          "latitude": "[%key:common::config_flow::data::latitude%]",
+          "longitude": "[%key:common::config_flow::data::longitude%]",
+          "mode": "[%key:common::config_flow::data::mode%]",
+          "name": "Name of the integration",
+          "location_name": "County/city or township"
+        },
+        "description": "Set up CWA open data. Weekly forecasts contain separate daytime and nighttime periods.",
+        "title": "OpenCWA"
+      },
+      "reauth_confirm": {
+        "title": "Update CWA API key",
+        "data": {
+          "api_key": "API key"
         }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "language": "Language",
+          "mode": "[%key:common::config_flow::data::mode%]"
+        },
+        "description": "Existing daily modes now provide day/night forecasts. Select twice_daily in the weather card, or hourly for short-term modes."
+      }
+    },
+    "error": {
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
+      "invalid_data": "CWA returned invalid or incomplete forecast data."
+    }
+  },
+  "selector": {
+    "forecast_mode": {
+      "options": {
+        "daily": "Day/night forecast (legacy daily)",
+        "onecall_daily": "Day/night forecast",
+        "hourly": "Short-term forecast (legacy hourly)",
+        "onecall_hourly": "Short-term forecast"
+      }
+    }
+  }
 }

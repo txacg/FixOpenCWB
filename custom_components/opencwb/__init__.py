@@ -55,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 
     ocwb = OCWB(api_key, config_dict).weather_manager()
     weather_coordinator = WeatherUpdateCoordinator(
-        ocwb, location_name, latitude, longitude, forecast_mode, hass
+        ocwb, location_name, latitude, longitude, forecast_mode, hass, config_entry
     )
 
     await weather_coordinator.async_config_entry_first_refresh()
@@ -105,9 +105,7 @@ def _filter_domain_configs(elements, domain):
 
 
 def _get_config_value(config_entry, key, default):
-    if config_entry.options:
-        return config_entry.options.get(key, default)
-    return config_entry.data.get(key, default)
+    return config_entry.options.get(key, config_entry.data.get(key, default))
 
 
 def _get_ocwb_config(language):

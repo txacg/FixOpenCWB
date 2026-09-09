@@ -8,7 +8,7 @@ DEFAULT_CONFIG = {
     'language': 'en',
     'connection': {
         'use_ssl': True,
-        'verify_ssl_certs': False,
+        'verify_ssl_certs': True,
         'use_proxy': False,
         'timeout_secs': 5
     },

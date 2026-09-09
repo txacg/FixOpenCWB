@@ -13,6 +13,15 @@ from .const import (
 )
 from .weather_update_coordinator import WeatherUpdateCoordinator
 
+# Preserve sensor type strings and unique IDs while reading HA native forecasts.
+FORECAST_VALUE_KEYS = {
+    "temperature": "native_temperature",
+    "templow": "native_templow",
+    "precipitation": "native_precipitation",
+    "pressure": "native_pressure",
+    "wind_speed": "native_wind_speed",
+}
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up OpenCWB sensor entities based on a config entry."""
@@ -110,5 +119,5 @@ class OpenCWBForecastSensor(AbstractOpenCWBSensor):
         """Return the state of the device."""
         forecasts = self._weather_coordinator.data.get(ATTR_API_FORECAST)
         if forecasts is not None and len(forecasts) > 0:
-            return forecasts[0].get(self._sensor_type, None)
+            return forecasts[0].get(FORECAST_VALUE_KEYS.get(self._sensor_type, self._sensor_type))
         return None
