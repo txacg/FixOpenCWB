@@ -10,5 +10,10 @@ No request URL, credential, header, or account information is included.
 Tests use explicit reference times so the forecast validity does not depend on
 the date when the suite runs. Edge cases are produced from copies in tests.
 
+`yonghe_twice_daily_partial.json` was fetched later on 2026-09-10 from
+F-D0047-071. It retains the first two samples of each element, without changing
+their values. The first weather period is 12:00–18:00, demonstrating that the
+official day/night product can begin with a shortened period.
+
 Schema: https://opendata.cwa.gov.tw/opendatadoc/Forecast/F-D0047-001_093.pdf
 API: https://opendata.cwa.gov.tw/apidoc/v1

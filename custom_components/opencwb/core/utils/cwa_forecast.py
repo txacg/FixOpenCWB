@@ -207,6 +207,20 @@ def _match(samples: list[Sample], start: datetime, end: datetime) -> Sample | No
     return exact[0] if exact else None
 
 
+def is_day_period(start: datetime, end: datetime) -> bool:
+    """Classify CWA day/night windows, including a shortened first period."""
+    local = start.astimezone(TAIPEI)
+    daytime = 6 <= local.hour < 18
+    boundary = local.replace(
+        hour=18 if daytime else 6, minute=0, second=0, microsecond=0
+    )
+    if local >= boundary:
+        boundary += timedelta(days=1)
+    if not start < end <= boundary:
+        raise CwaDataError("Forecast interval crosses a CWA day/night boundary")
+    return daytime
+
+
 def parse_forecast(
     payload: dict, location_name: str, forecast_type: ForecastType
 ) -> CwaForecast:
@@ -259,13 +273,7 @@ def parse_forecast(
                 raise CwaDataError("Point forecast has no validity boundary")
             end = min(candidates)
         if forecast_type == "twice_daily":
-            local = anchor.start.astimezone(TAIPEI)
-            if end - anchor.start != timedelta(hours=12) or (
-                local.hour,
-                local.minute,
-                local.second,
-            ) not in ((6, 0, 0), (18, 0, 0)):
-                raise CwaDataError("Expected a CWA 06-18 or 18-06 forecast interval")
+            is_day_period(anchor.start, end)
         if end <= anchor.start:
             raise CwaDataError("Duplicate or invalid forecast boundary")
         values = {}
@@ -333,7 +341,7 @@ def to_ha_forecast(
     values = period.values
     result: dict[str, Any] = {"datetime": period.start.astimezone(UTC).isoformat()}
     if forecast_type == "twice_daily":
-        is_daytime = period.start.astimezone(TAIPEI).hour == 6
+        is_daytime = is_day_period(period.start, period.end)
         result["is_daytime"] = is_daytime
         temperature = values.get("max_temperature", values.get("temperature"))
         if "min_temperature" in values:

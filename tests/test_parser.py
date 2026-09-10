@@ -222,3 +222,39 @@ def test_wrong_location_and_invalid_interval_fail_safely():
 def test_daily_is_not_fabricated():
     with pytest.raises(CwaDataError):
         parse_forecast(payload(), "永和區", "daily")
+
+
+def test_live_shortened_day_period():
+    data = json.loads(
+        (FIXTURES / "yonghe_twice_daily_partial.json").read_text(encoding="utf-8")
+    )
+    result = parse(data)
+    day, night = [to_ha_forecast(p, "twice_daily") for p in result.periods]
+    assert day["datetime"] == "2026-09-10T04:00:00+00:00"
+    assert day["is_daytime"] is True
+    assert night["is_daytime"] is False
+    assert result.periods[0].end - result.periods[0].start == timedelta(hours=6)
+    assert (
+        select_current(result, datetime(2026, 9, 10, 6, tzinfo=UTC))
+        == result.periods[0]
+    )
+    assert day["native_temperature"] == float(
+        element(data, "最高溫度")["Time"][0]["ElementValue"][0]["MaxTemperature"]
+    )
+
+
+@pytest.mark.parametrize(
+    "start", ["2026-09-10T00:00:00+08:00", "2026-09-09T21:00:00+08:00"]
+)
+def test_shortened_night_remains_night(start):
+    data = payload()
+    element(data, "天氣現象")["Time"][0]["StartTime"] = start
+    first = parse(data).periods[0]
+    assert to_ha_forecast(first, "twice_daily")["is_daytime"] is False
+
+
+def test_twice_daily_rejects_crossing_day_night_boundary():
+    data = payload()
+    element(data, "天氣現象")["Time"][0]["EndTime"] = "2026-09-10T09:00:00+08:00"
+    with pytest.raises(CwaDataError, match="day/night boundary"):
+        parse(data)

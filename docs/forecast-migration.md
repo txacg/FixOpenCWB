@@ -21,6 +21,10 @@ forecast_type: twice_daily
 single request per refresh. They are retained to preserve existing identities.
 The options selector describes the actual products.
 
+CWA may shorten the first day/night period (for example, 12:00–18:00).
+Its actual start time is preserved and it remains a daytime forecast. Night
+periods beginning after midnight remain nighttime forecasts through 06:00.
+
 Short-term temperature point times determine the forecast timeline. Other point
 values are included only at the same timestamp; interval values must cover that
 forecast period. No wind values are interpolated. A three-hour probability is
