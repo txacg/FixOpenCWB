@@ -5,6 +5,7 @@ import json
 import requests
 
 from . import exceptions
+from .cwa_tls import cwa_session
 from .enums import ImageTypeEnum
 
 
@@ -148,11 +149,12 @@ class HttpClient:
         url = f"https://{self.root_uri}/{path}"
         proxies = self.config["proxies"] if self.config["connection"]["use_proxy"] else {}
         try:
-            response = requests.get(
-                url, params=query, headers=headers, proxies=proxies,
-                timeout=self.config["connection"]["timeout_secs"],
-                verify=True, allow_redirects=False,
-            )
+            with cwa_session() as session:
+                response = session.get(
+                    url, params=query, headers=headers, proxies=proxies,
+                    timeout=self.config["connection"]["timeout_secs"],
+                    verify=True, allow_redirects=False,
+                )
         except requests.exceptions.SSLError:
             raise exceptions.InvalidSSLCertificateError("CWA TLS verification failed") from None
         except requests.exceptions.Timeout:

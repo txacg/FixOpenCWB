@@ -1,6 +1,6 @@
 """Dataset routing and sanitized transport errors."""
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import requests
@@ -63,7 +63,7 @@ def test_request_is_encoded_once_and_tls_verified(client, monkeypatch):
     response = Mock(status_code=200)
     response.json.return_value = payload()
     get = Mock(return_value=response)
-    monkeypatch.setattr(requests, "get", get)
+    monkeypatch.setattr(requests.Session, "get", get)
     client.get_json("F-D0047-071", {"LocationName": "永和區"})
     args, kwargs = get.call_args
     assert "?" not in args[0]
@@ -88,7 +88,7 @@ def test_request_is_encoded_once_and_tls_verified(client, monkeypatch):
 )
 def test_network_errors_do_not_expose_url(client, monkeypatch, error, expected):
     monkeypatch.setattr(
-        requests, "get", Mock(side_effect=error("Authorization=secret-value"))
+        requests.Session, "get", Mock(side_effect=error("Authorization=secret-value"))
     )
     with pytest.raises(expected) as result:
         client.get_json("F-D0047-071")
@@ -109,7 +109,7 @@ def test_network_errors_do_not_expose_url(client, monkeypatch, error, expected):
 )
 def test_http_errors(client, monkeypatch, status, expected):
     response = Mock(status_code=status, text="secret-value")
-    monkeypatch.setattr(requests, "get", Mock(return_value=response))
+    monkeypatch.setattr(requests.Session, "get", Mock(return_value=response))
     with pytest.raises(expected) as result:
         client.get_json("F-D0047-071")
     assert "secret-value" not in str(result.value)
@@ -123,7 +123,7 @@ def test_malformed_json(client, monkeypatch, bad):
         response.json.side_effect = bad
     else:
         response.json.return_value = bad
-    monkeypatch.setattr(requests, "get", Mock(return_value=response))
+    monkeypatch.setattr(requests.Session, "get", Mock(return_value=response))
     with pytest.raises(exceptions.ParseAPIResponseError):
         client.get_json("F-D0047-071")
     response.close.assert_called_once()
@@ -136,3 +136,28 @@ def test_manager_uses_one_request(monkeypatch):
     result = manager.cwa_forecast("新北市永和區", "daily")
     assert result.forecast_type == "twice_daily"
     get.assert_called_once_with("F-D0047-071", params={"LocationName": "永和區"})
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_request_session_closed_on_success_and_failure(client, fails):
+    from core.commons.cwa_tls import cwa_session
+
+    session = cwa_session()
+    response = Mock(status_code=200)
+    response.json.return_value = payload()
+    with (
+        patch("core.commons.http_client.cwa_session", return_value=session),
+        patch.object(session, "close", wraps=session.close) as close,
+        patch.object(
+            session,
+            "get",
+            return_value=response,
+            side_effect=requests.Timeout("secret-value") if fails else None,
+        ),
+    ):
+        if fails:
+            with pytest.raises(exceptions.TimeoutError):
+                client.get_json("F-D0047-071")
+        else:
+            client.get_json("F-D0047-071")
+        close.assert_called_once()

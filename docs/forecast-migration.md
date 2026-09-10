@@ -62,6 +62,50 @@ Sources:
 
 ## Validation
 
+### CWA TLS compatibility
+
+Real Home Assistant 2026.9.1 testing (Python 3.14, OpenSSL 3.5.7,
+Requests 2.34.2) identified strict X.509 validation as the TLS blocker:
+`Missing Subject Key Identifier`. Removing only `VERIFY_X509_STRICT` changed
+the default flags from 557088 to 557056 and allowed the HTTPS handshake.
+
+On 2026-09-11, direct inspection with SNI `opendata.cwa.gov.tw` found:
+
+| Certificate | Subject Key Identifier |
+| --- | --- |
+| Served leaf: `opendata.cwa.gov.tw` | Present |
+| Served intermediate: `TWCA Secure SSL Certification Authority` | Present |
+| Trusted root: `TWCA Global Root CA`, serial `0CBE` | **Absent** |
+
+The root is loaded from the trust store, not sent by the server. Its SHA-256
+fingerprint is
+`59:76:90:07:F7:68:5D:0F:CD:50:87:2F:9F:95:D5:75:5A:5B:2B:45:7D:81:F3:69:2B:61:0A:98:67:2F:0E:1B`.
+An independent OpenSSL 3.0.13 test with strict validation enabled reproduced
+verification error 86; removing only that flag succeeded with TLS 1.3.
+
+The dedicated request-scoped session uses Requests' documented
+`HTTPAdapter.build_connection_pool_key_attributes` extension point and a fresh
+`ssl.create_default_context`. It clears only `ssl.VERIFY_X509_STRICT`, keeping
+`CERT_REQUIRED`, hostname checking, all other flags/protocol defaults, and
+normal trusted CA chain validation. CA selection follows Requests' usual bundle
+or configured CA file/directory; no certificate is added as a trust anchor.
+The adapter is mounted only for HTTPS `opendata.cwa.gov.tw` on port 443 and
+independently rejects other destinations or disabled verification. Redirects
+remain disabled. HTTPS proxy TLS contexts, other hosts, ordinary Requests
+sessions, and Home Assistant's global context are not changed. Sessions are
+closed after each request and failures remain credential-safe.
+
+This is a scoped compatibility workaround for the current CWA/TWCA chain, not
+a general recommendation to disable strict validation. Recheck it when the
+chain/trust anchor changes and remove it once the default strict handshake
+works. No automatic retry with weaker validation is performed.
+
+References:
+- https://docs.python.org/3.14/library/ssl.html#ssl.create_default_context
+- https://requests.readthedocs.io/en/latest/api/#requests.adapters.HTTPAdapter.build_connection_pool_key_attributes
+
+### Tests and real installation
+
 Run parser/client tests on Python 3.11+ with `pip install -r requirements_test.txt`
 and `pytest`. The HA suite requires Linux and Python 3.14.2+; install
 `pytest-homeassistant-custom-component==0.13.364` (pins HA 2026.9.1) and run the
