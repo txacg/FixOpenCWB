@@ -41,7 +41,7 @@ class CwaLocation:
 
 
 def forecast_type_for_mode(mode: str) -> ForecastType:
-    if mode in ("daily", "onecall_daily"):
+    if mode in ("daily", "onecall_daily", "twice_daily"):
         return "twice_daily"
     if mode in ("hourly", "onecall_hourly"):
         return "hourly"

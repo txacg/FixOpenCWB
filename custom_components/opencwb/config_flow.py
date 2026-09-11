@@ -18,9 +18,8 @@ from .const import (
     DOMAIN,
     FORECAST_MODES,
 )
-from .core.commons.exceptions import OCWBError, UnauthorizedError
-from .core.ocwb import OCWB
-from .core.utils.cwa_forecast import CwaDataError
+from .core.commons.cwa_api import CwaAPI, CwaError
+from .core.utils.cwa_forecast import CwaDataError, parse_forecast
 from .core.utils.cwa_location import forecast_type_for_mode, resolve_location
 
 MODE_SELECTOR = selector.SelectSelector(
@@ -32,18 +31,26 @@ MODE_SELECTOR = selector.SelectSelector(
 
 async def _validate(hass, api_key: str, location: str, mode: str) -> str | None:
     try:
-        resolve_location(location, forecast_type_for_mode(mode))
+        kind = forecast_type_for_mode(mode)
+        route = resolve_location(location, kind)
     except ValueError:
         return "invalid_location_name"
     try:
-        client = OCWB(api_key).weather_manager()
-        await hass.async_add_executor_job(client.cwa_forecast, location, mode)
-    except UnauthorizedError:
-        return "invalid_api_key"
+        client = CwaAPI(api_key)
+        await hass.async_add_executor_job(
+            lambda: parse_forecast(
+                client.json(route.dataset, route.name), route.name, kind
+            )
+        )
+    except CwaError as error:
+        return {
+            "authorization": "invalid_api_key",
+            "tls": "tls",
+            "timeout": "timeout",
+            "malformed_data": "invalid_data",
+        }.get(error.code, "cannot_connect")
     except CwaDataError:
         return "invalid_data"
-    except OCWBError:
-        return "cannot_connect"
     return None
 
 
@@ -125,7 +132,9 @@ class OpenCWBOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None) -> ConfigFlowResult:
         errors = {}
-        mode = _get_config_value(self.config_entry, CONF_MODE, DEFAULT_FORECAST_MODE)
+        mode = forecast_type_for_mode(
+            _get_config_value(self.config_entry, CONF_MODE, DEFAULT_FORECAST_MODE)
+        )
         if user_input is not None:
             mode = user_input.get(CONF_MODE, mode)
             error = await _validate(
