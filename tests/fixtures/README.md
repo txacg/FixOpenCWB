@@ -22,3 +22,5 @@ API: https://opendata.cwa.gov.tw/apidoc/v1
 They retain the unmodified records for 永和、臺北、板橋、淡水、硬漢嶺 when
 present in each product. Other stations were removed to keep fixtures compact.
 Observation semantics: https://opendata.cwa.gov.tw/opendatadoc/Observation/O-A0001-001.pdf
+
+`yonghe_daily.xml` retains 永和區 from official `65_Week24_CH.xml` in F-D0047-093 downloaded on 2026-09-11. Other locations were removed and namespace prefixes normalized; seven official 24-hour periods and values are unchanged. It is not derived from 12-hour JSON.

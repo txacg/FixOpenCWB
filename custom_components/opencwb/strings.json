@@ -8,7 +8,9 @@
       "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
-      "invalid_data": "CWA returned invalid or incomplete forecast data."
+      "invalid_data": "CWA returned invalid or incomplete forecast data.",
+      "timeout": "CWA request timed out; try again later.",
+      "tls": "CWA TLS certificate validation failed; inspect integration diagnostics."
     },
     "step": {
       "user": {
@@ -39,23 +41,23 @@
           "language": "Language",
           "mode": "[%key:common::config_flow::data::mode%]"
         },
-        "description": "Existing daily modes now provide day/night forecasts. Select twice_daily in the weather card, or hourly for short-term modes."
+        "description": "Select the primary forecast product. Current weather uses station observations; daily forecasts additionally use the official 24-hour product. Existing identities are preserved."
       }
     },
     "error": {
       "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
-      "invalid_data": "CWA returned invalid or incomplete forecast data."
+      "invalid_data": "CWA returned invalid or incomplete forecast data.",
+      "timeout": "CWA request timed out; try again later.",
+      "tls": "CWA TLS certificate validation failed; inspect integration diagnostics."
     }
   },
   "selector": {
     "forecast_mode": {
       "options": {
-        "daily": "Day/night forecast (legacy daily)",
-        "onecall_daily": "Day/night forecast",
-        "hourly": "Short-term forecast (legacy hourly)",
-        "onecall_hourly": "Short-term forecast"
+        "hourly": "Short-term hourly forecast",
+        "twice_daily": "One-week day/night forecast"
       }
     }
   }
