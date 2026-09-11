@@ -17,3 +17,8 @@ official day/night product can begin with a shortened period.
 
 Schema: https://opendata.cwa.gov.tw/opendatadoc/Forecast/F-D0047-001_093.pdf
 API: https://opendata.cwa.gov.tw/apidoc/v1
+
+`O-A0001-001.json` and `O-A0003-001.json` were fetched on 2026-09-11.
+They retain the unmodified records for 永和、臺北、板橋、淡水、硬漢嶺 when
+present in each product. Other stations were removed to keep fixtures compact.
+Observation semantics: https://opendata.cwa.gov.tw/opendatadoc/Observation/O-A0001-001.pdf
