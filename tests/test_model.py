@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from core.utils.cwa_daily import parse_daily_xml
+from core.utils.cwa_forecast import to_ha_forecast
 from core.utils.cwa_model import ForecastProduct, WeatherSnapshot
 from test_observation import NOW, observations, select
 
@@ -43,3 +44,11 @@ def test_expired_forecast_remains_stale_even_when_refresh_failed():
     old = model.structured(NOW + timedelta(days=10), ("daily",), 2)
     assert old["forecasts"]["daily"]["status"] == "stale"
     assert old["forecasts"]["daily"]["periods"] == []
+
+
+def test_daily_sunny_is_not_clear_night_because_period_starts_at_midnight():
+    period = snapshot().forecasts["daily"].data.periods[0]
+    period = replace(period, values={**period.values, "weather_code": 1})
+    result = to_ha_forecast(period, "daily", is_daytime=False)
+    assert result["condition"] == "sunny"
+    assert "is_daytime" not in result

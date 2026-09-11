@@ -78,6 +78,17 @@ async def test_real_llm_platform_discovery(hass):
     assert any(tool.name == GetCWAWeather.name for tool in tools.tools)
 
 
+async def test_tool_requires_assistant_exposure_context(hass):
+    await setup(hass, make_entry())
+    assert async_get_tools(hass, context(assistant=None), LLM_API_ASSIST) is None
+    result = await GetCWAWeather().async_call(
+        hass,
+        ToolInput(tool_name=GetCWAWeather.name, tool_args={}),
+        context(assistant=None),
+    )
+    assert "error" in result and "current" not in result
+
+
 async def test_unexposed_entity_and_revocation_are_denied(hass):
     entity = await setup(hass, make_entry())
     await expose(hass, entity.entity_id, False)

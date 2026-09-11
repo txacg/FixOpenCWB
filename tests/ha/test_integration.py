@@ -273,8 +273,6 @@ async def test_release_detaches_closing_cache_before_another_setup(hass):
 
 
 async def test_platform_setup_failure_releases_repository(hass):
-    from custom_components.opencwb import async_setup_entry
-
     entry = make_entry()
     entry.add_to_hass(hass)
     with (
@@ -288,9 +286,9 @@ async def test_platform_setup_failure_releases_repository(hass):
             "async_unload_platforms",
             new=AsyncMock(return_value=True),
         ),
-        pytest.raises(RuntimeError, match="platform setup failed"),
     ):
-        await async_setup_entry(hass, entry)
+        assert not await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
     assert entry.entry_id not in hass.data["opencwb"]
     assert not hass.data["opencwb"]["repositories"]
 

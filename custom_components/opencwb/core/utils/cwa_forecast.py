@@ -359,6 +359,8 @@ def to_ha_forecast(
         if "min_temperature" in values:
             result["native_templow"] = values["min_temperature"]
     elif forecast_type == "daily":
+        # A calendar-day condition summarizes the whole day, not its midnight start.
+        is_daytime = True
         temperature = values.get("max_temperature")
         if "min_temperature" in values:
             result["native_templow"] = values["min_temperature"]

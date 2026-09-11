@@ -36,6 +36,8 @@ class GetCWAWeather(Tool):
     )
 
     async def async_call(self, hass, tool_input: ToolInput, llm_context: LLMContext):
+        if not llm_context.assistant:
+            return {"error": "An assistant exposure context is required"}
         args = self.parameters(tool_input.tool_args)
         entities = await allowed_entities(
             hass, llm_context.context, llm_context.assistant
@@ -60,6 +62,10 @@ class GetCWAWeather(Tool):
 
 @callback
 def async_get_tools(hass, llm_context: LLMContext, api_id: str):
-    if api_id != LLM_API_ASSIST or not weather_entities(hass, llm_context.assistant):
+    if (
+        api_id != LLM_API_ASSIST
+        or not llm_context.assistant
+        or not weather_entities(hass, llm_context.assistant)
+    ):
         return None
     return LLMTools(tools=[GetCWAWeather()], prompt=PROMPT)
