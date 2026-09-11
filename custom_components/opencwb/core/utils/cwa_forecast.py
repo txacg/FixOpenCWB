@@ -7,7 +7,7 @@ from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 TAIPEI = ZoneInfo("Asia/Taipei")
-ForecastType = Literal["hourly", "twice_daily"]
+ForecastType = Literal["hourly", "twice_daily", "daily"]
 
 
 class CwaDataError(ValueError):
@@ -93,6 +93,8 @@ FIELDS = {
     "MaxTemperature": "max_temperature",
     "MinTemperature": "min_temperature",
     "ApparentTemperature": "apparent_temperature",
+    "MaxApparentTemperature": "max_apparent_temperature",
+    "MinApparentTemperature": "min_apparent_temperature",
     "DewPoint": "dew_point",
     "RelativeHumidity": "humidity",
     "WindSpeed": "wind_speed",
@@ -225,8 +227,8 @@ def parse_forecast(
     payload: dict, location_name: str, forecast_type: ForecastType
 ) -> CwaForecast:
     """Match points exactly and intervals by coverage, never by array index."""
-    if forecast_type not in ("hourly", "twice_daily"):
-        raise CwaDataError("Unsupported forecast type; daily is not implemented")
+    if forecast_type not in ("hourly", "twice_daily", "daily"):
+        raise CwaDataError("Unsupported forecast type")
     if not isinstance(payload, dict) or payload.get("success") not in (True, "true"):
         raise CwaDataError("CWA response was not successful")
     try:
@@ -254,7 +256,7 @@ def parse_forecast(
         raise CwaDataError("Missing weather timeline")
     anchors = (
         weather
-        if forecast_type == "twice_daily"
+        if forecast_type in ("twice_daily", "daily")
         else series.get("temperature", []) or weather
     )
     periods = []
@@ -274,6 +276,16 @@ def parse_forecast(
             end = min(candidates)
         if forecast_type == "twice_daily":
             is_day_period(anchor.start, end)
+        if forecast_type == "daily":
+            local = anchor.start.astimezone(TAIPEI)
+            if end - anchor.start != timedelta(days=1) or (
+                local.hour,
+                local.minute,
+                local.second,
+            ) != (0, 0, 0):
+                raise CwaDataError(
+                    "Daily forecast requires official midnight-to-midnight intervals"
+                )
         if end <= anchor.start:
             raise CwaDataError("Duplicate or invalid forecast boundary")
         values = {}
@@ -344,6 +356,10 @@ def to_ha_forecast(
         is_daytime = is_day_period(period.start, period.end)
         result["is_daytime"] = is_daytime
         temperature = values.get("max_temperature", values.get("temperature"))
+        if "min_temperature" in values:
+            result["native_templow"] = values["min_temperature"]
+    elif forecast_type == "daily":
+        temperature = values.get("max_temperature")
         if "min_temperature" in values:
             result["native_templow"] = values["min_temperature"]
     elif forecast_type == "hourly":
