@@ -1,9 +1,10 @@
 """Abstraction form OCWB sensors."""
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import ATTR_ATTRIBUTION
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     ATTRIBUTION,
@@ -32,8 +33,8 @@ class AbstractOpenCWBSensor(SensorEntity):
         self._attr_unique_id = unique_id
         self._sensor_type = sensor_type
         self._sensor_name = sensor_configuration[SENSOR_NAME]
-        self._unit_of_measurement = sensor_configuration.get(SENSOR_UNIT)
-        self._device_class = sensor_configuration.get(SENSOR_DEVICE_CLASS)
+        self._attr_native_unit_of_measurement = sensor_configuration.get(SENSOR_UNIT)
+        self._attr_device_class = sensor_configuration.get(SENSOR_DEVICE_CLASS)
         self._coordinator = coordinator
         split_unique_id = unique_id.split("-")
         self._attr_device_info = DeviceInfo(
@@ -54,16 +55,6 @@ class AbstractOpenCWBSensor(SensorEntity):
         return ATTRIBUTION
 
     @property
-    def device_class(self):
-        """Return the device_class."""
-        return self._device_class
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement of this entity, if any."""
-        return self._unit_of_measurement
-
-    @property
     def extra_state_attributes(self):
         """Return the state attributes."""
         return {ATTR_ATTRIBUTION: ATTRIBUTION}
@@ -75,6 +66,7 @@ class AbstractOpenCWBSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Connect to dispatcher listening for entity data notifications."""
+        await super().async_added_to_hass()
         self.async_on_remove(
             self._coordinator.async_add_listener(self.async_write_ha_state)
         )

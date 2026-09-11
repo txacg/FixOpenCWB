@@ -1,7 +1,7 @@
 """Support for the OpenCWB (OCWB) service."""
+
 from .abstract_ocwb_sensor import AbstractOpenCWBSensor
 from .const import (
-    ATTR_API_FORECAST,
     CONF_LOCATION_NAME,
     DOMAIN,
     ENTRY_NAME,
@@ -64,6 +64,24 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class OpenCWBSensor(AbstractOpenCWBSensor):
     """Implementation of an OpenCWB sensor."""
 
+    @property
+    def available(self):
+        return super().available and bool(self._weather_coordinator.current)
+
+    @property
+    def extra_state_attributes(self):
+        from homeassistant.util import dt
+
+        data = self._weather_coordinator.data.structured(dt.utcnow(), (), 1)
+        current = data["current"]
+        return {
+            **super().extra_state_attributes,
+            "source": "observation",
+            "station": current.get("station"),
+            "observed_at": current.get("observed_at"),
+            "data_status": current["status"],
+        }
+
     def __init__(
         self,
         name,
@@ -74,26 +92,27 @@ class OpenCWBSensor(AbstractOpenCWBSensor):
     ):
         """Initialize the sensor."""
         super().__init__(
-            name,
-            unique_id,
-            sensor_type,
-            sensor_configuration,
-            weather_coordinator
+            name, unique_id, sensor_type, sensor_configuration, weather_coordinator
         )
         self._weather_coordinator = weather_coordinator
         self._attr_name = name.replace("_", " ")
         self._attr_unique_id = unique_id
 
-
     @property
-    def state(self):
+    def native_value(self):
         """Return the state of the device."""
-        return self._weather_coordinator.data.get(self._sensor_type, None)
+        return self._weather_coordinator.current.get(
+            {"rain": "precipitation_today"}.get(self._sensor_type, self._sensor_type)
+        )
 
 
 class OpenCWBForecastSensor(AbstractOpenCWBSensor):
     """Implementation of an OpenCWB this day forecast sensor."""
 
+    @property
+    def available(self):
+        return super().available and bool(self._weather_coordinator.forecast())
+
     def __init__(
         self,
         name,
@@ -104,20 +123,18 @@ class OpenCWBForecastSensor(AbstractOpenCWBSensor):
     ):
         """Initialize the sensor."""
         super().__init__(
-            name,
-            unique_id,
-            sensor_type,
-            sensor_configuration,
-            weather_coordinator
+            name, unique_id, sensor_type, sensor_configuration, weather_coordinator
         )
         self._weather_coordinator = weather_coordinator
         self._attr_name = name.replace("_", " ")
         self._attr_unique_id = unique_id
 
     @property
-    def state(self):
+    def native_value(self):
         """Return the state of the device."""
-        forecasts = self._weather_coordinator.data.get(ATTR_API_FORECAST)
+        forecasts = self._weather_coordinator.forecast()
         if forecasts is not None and len(forecasts) > 0:
-            return forecasts[0].get(FORECAST_VALUE_KEYS.get(self._sensor_type, self._sensor_type))
+            return forecasts[0].get(
+                FORECAST_VALUE_KEYS.get(self._sensor_type, self._sensor_type)
+            )
         return None

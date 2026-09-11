@@ -126,13 +126,13 @@ def parse_observations(payload: dict, dataset: str) -> tuple[Observation, ...]:
                     if value is not None:
                         values[destination] = value
                 rain = _measurement(
-                    elements.get("Now", {}).get("Precipitation"),
+                    (elements.get("Now") or {}).get("Precipitation"),
                     "precipitation_today",
                     quality,
                 )
                 if rain is not None:
                     values["precipitation_today"] = rain
-                gust_info = elements.get("GustInfo", {})
+                gust_info = elements.get("GustInfo") or {}
                 gust = _measurement(
                     gust_info.get("PeakGustSpeed"), "wind_gust", quality
                 )
@@ -175,7 +175,7 @@ def parse_observations(payload: dict, dataset: str) -> tuple[Observation, ...]:
                         quality,
                     )
                 )
-            except (KeyError, TypeError, ValueError, StopIteration):
+            except (KeyError, TypeError, ValueError, AttributeError, StopIteration):
                 # One malformed station must not discard all other real stations.
                 continue
         if not result:

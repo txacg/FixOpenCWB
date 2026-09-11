@@ -1,33 +1,30 @@
 """Support for the OpenCWB (OCWB) service."""
-from homeassistant.core import HomeAssistant, callback
+
+from homeassistant.components.weather import (
+    Forecast,
+    SingleCoordinatorWeatherEntity,
+    WeatherEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.weather import Forecast, WeatherEntityFeature, SingleCoordinatorWeatherEntity
-from homeassistant.const import UnitOfLength, UnitOfPressure, UnitOfSpeed, UnitOfTemperature
-from homeassistant.util.unit_conversion import PressureConverter
+from homeassistant.const import (
+    UnitOfLength,
+    UnitOfPressure,
+    UnitOfSpeed,
+    UnitOfTemperature,
+)
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt
 
 from .const import (
-    ATTR_API_CLOUDS,
-    ATTR_API_CONDITION,
-    ATTR_API_DEW_POINT,
-    ATTR_API_FEELS_LIKE_TEMPERATURE,
-    ATTR_API_FORECAST,
-    ATTR_API_HUMIDITY,
-    ATTR_API_PRESSURE,
-    ATTR_API_TEMPERATURE,
-    ATTR_API_WIND_BEARING,
-    ATTR_API_WIND_GUST,
-    ATTR_API_WIND_SPEED,
     ATTRIBUTION,
     CONF_LOCATION_NAME,
     DEFAULT_NAME,
     DOMAIN,
     ENTRY_NAME,
     ENTRY_WEATHER_COORDINATOR,
-    FORECAST_MODE_DAILY,
-    FORECAST_MODE_ONECALL_DAILY,
     MANUFACTURER,
 )
 from .weather_update_coordinator import WeatherUpdateCoordinator
@@ -45,13 +42,16 @@ async def async_setup_entry(
     location_name = domain_data[CONF_LOCATION_NAME]
 
     unique_id = f"{config_entry.unique_id}"
-    ocwb_weather = OpenCWBWeather(f"{name} {location_name}", f"{unique_id}-{location_name}", weather_coordinator)
+    ocwb_weather = OpenCWBWeather(
+        f"{name} {location_name}", f"{unique_id}-{location_name}", weather_coordinator
+    )
 
     async_add_entities([ocwb_weather], False)
 
 
 class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
     """Implementation of an OpenCWB sensor."""
+
     _attr_attribution = ATTRIBUTION
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_native_pressure_unit = UnitOfPressure.HPA
@@ -76,10 +76,7 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
             manufacturer=MANUFACTURER,
             name=DEFAULT_NAME,
         )
-        if weather_coordinator.forecast_mode in (
-            FORECAST_MODE_DAILY,
-            FORECAST_MODE_ONECALL_DAILY,
-        ):
+        if weather_coordinator.forecast_type in ("twice_daily",):
             self._attr_supported_features = WeatherEntityFeature.FORECAST_TWICE_DAILY
         else:  # FORECAST_MODE_DAILY or FORECAST_MODE_ONECALL_HOURLY
             self._attr_supported_features = WeatherEntityFeature.FORECAST_HOURLY
@@ -92,12 +89,18 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
     @property
     def condition(self):
         """Return the current condition."""
-        return self._weather_coordinator.data[ATTR_API_CONDITION]
+        return self._weather_coordinator.current.get("condition")
 
     @property
     def available(self):
         """Return True if entity is available."""
-        return self._weather_coordinator.last_update_success
+        return self._weather_coordinator.last_update_success and (
+            bool(self._weather_coordinator.current)
+            or any(
+                self._weather_coordinator.forecast(kind)
+                for kind in self._weather_coordinator.data.forecasts
+            )
+        )
 
     async def async_added_to_hass(self):
         """Register the base listener that updates state AND forecast subscribers."""
@@ -106,54 +109,70 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
     @property
     def cloud_coverage(self) -> float | None:
         """Return the Cloud coverage in %."""
-        return self._weather_coordinator.data[ATTR_API_CLOUDS]
+        return self._weather_coordinator.current.get("clouds")
 
     @property
     def native_apparent_temperature(self) -> float | None:
         """Return the apparent temperature."""
-        return self._weather_coordinator.data[ATTR_API_FEELS_LIKE_TEMPERATURE]
+        return self._weather_coordinator.current.get("apparent_temperature")
 
     @property
     def native_temperature(self) -> float | None:
         """Return the temperature."""
-        return self._weather_coordinator.data[ATTR_API_TEMPERATURE]
+        return self._weather_coordinator.current.get("temperature")
 
     @property
     def native_pressure(self) -> float | None:
         """Return the pressure."""
-        return self._weather_coordinator.data[ATTR_API_PRESSURE]
+        return self._weather_coordinator.current.get("pressure")
 
     @property
     def humidity(self) -> float | None:
         """Return the humidity."""
-        return self._weather_coordinator.data[ATTR_API_HUMIDITY]
+        return self._weather_coordinator.current.get("humidity")
 
     @property
     def native_dew_point(self) -> float | None:
         """Return the dew point."""
-        return self._weather_coordinator.data[ATTR_API_DEW_POINT]
+        return self._weather_coordinator.current.get("dew_point")
 
     @property
     def native_wind_gust_speed(self) -> float | None:
         """Return the wind gust speed."""
-        return self._weather_coordinator.data[ATTR_API_WIND_GUST]
+        return self._weather_coordinator.current.get("wind_gust")
 
     @property
     def native_wind_speed(self) -> float | None:
         """Return the wind speed."""
-        return self._weather_coordinator.data[ATTR_API_WIND_SPEED]
+        return self._weather_coordinator.current.get("wind_speed")
 
     @property
     def wind_bearing(self) -> float | str | None:
         """Return the wind bearing."""
-        return self._weather_coordinator.data[ATTR_API_WIND_BEARING]
+        return self._weather_coordinator.current.get("wind_bearing")
 
     @callback
     def _async_forecast_twice_daily(self) -> list[Forecast] | None:
         """Return CWA's 12-hour day/night intervals in native units."""
-        return self._weather_coordinator.data[ATTR_API_FORECAST]
+        return self._weather_coordinator.forecast("twice_daily")
 
     @callback
     def _async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast in native units."""
-        return self._weather_coordinator.data[ATTR_API_FORECAST]
+        return self._weather_coordinator.forecast("hourly")
+
+    @property
+    def supported_features(self):
+        features = self._attr_supported_features
+        if "daily" in self._weather_coordinator.data.forecasts:
+            features |= WeatherEntityFeature.FORECAST_DAILY
+        return features
+
+    @property
+    def extra_state_attributes(self):
+        data = self._weather_coordinator.data.structured(dt.utcnow(), (), 1)
+        return {"observation": data["current"], "data_errors": data["errors"]}
+
+    @callback
+    def _async_forecast_daily(self) -> list[Forecast] | None:
+        return self._weather_coordinator.forecast("daily")

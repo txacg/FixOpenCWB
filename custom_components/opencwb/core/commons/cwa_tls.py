@@ -14,6 +14,10 @@ CWA_ORIGIN = "https://opendata.cwa.gov.tw/"
 class CwaTLSAdapter(HTTPAdapter):
     """Keep verified TLS; relax only strict X.509 checks for the CWA origin."""
 
+    def __init__(self, *, strict: bool = False):
+        self._strict = strict
+        super().__init__()
+
     def build_connection_pool_key_attributes(
         self,
         request: requests.PreparedRequest,
@@ -46,15 +50,16 @@ class CwaTLSAdapter(HTTPAdapter):
         # Python 3.14 strict X.509 validation rejects the current CWA/TWCA chain
         # for a missing Subject Key Identifier. All other flags, CERT_REQUIRED,
         # hostname checking, and trusted-chain validation stay at their defaults.
-        context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        if not self._strict:
+            context.verify_flags &= ~ssl.VERIFY_X509_STRICT
         pool["ssl_context"] = context
         return host, pool
 
 
-def cwa_session() -> requests.Session:
+def cwa_session(*, strict: bool = False) -> requests.Session:
     """Create a request-scoped session; callers close it with a context manager."""
     session = requests.Session()
-    adapter = CwaTLSAdapter()
+    adapter = CwaTLSAdapter(strict=strict)
     session.mount(CWA_ORIGIN, adapter)
     session.mount("https://opendata.cwa.gov.tw:443/", adapter)
     return session
