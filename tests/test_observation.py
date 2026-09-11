@@ -154,3 +154,18 @@ def test_future_data_and_far_away_stations_rejected():
         select_station(observations(), "澎湖縣", "馬公市", 23.5, 119.5, NOW).observation
         is None
     )
+
+
+def test_fresh_stations_with_no_usable_values_are_not_labeled_stale():
+    assert (
+        select([replace(o, values={}) for o in observations()]).status
+        == "missing_values"
+    )
+
+
+def test_missing_station_identity_is_rejected():
+    data = payload()
+    for station in data["records"]["Station"]:
+        station["StationId"] = None
+    with pytest.raises(CwaDataError):
+        parse_observations(data, "O-A0001-001")

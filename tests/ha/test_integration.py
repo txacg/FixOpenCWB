@@ -251,3 +251,53 @@ async def test_forecast_release_cache_ttl(hass):
     after = before.replace(minute=45)
     assert forecast_ttl("hourly", after) == 3600
     assert forecast_ttl("twice_daily", after) == 10800
+
+
+async def test_release_detaches_closing_cache_before_another_setup(hass):
+    from custom_components.opencwb import _release
+
+    entity = await setup(hass, make_entry())
+    pool = hass.data["opencwb"]["repositories"]
+    key, shared = next(iter(pool.items()))
+    replacement = {"repository": object(), "users": 1}
+
+    async def close():
+        assert key not in pool
+        pool[key] = replacement
+
+    with patch.object(entity.coordinator.repository.cache, "close", side_effect=close):
+        await _release(hass, key)
+    assert pool[key] is replacement
+    pool[key] = shared  # restore real entry ownership for fixture cleanup
+    shared["users"] = 1
+
+
+async def test_platform_setup_failure_releases_repository(hass):
+    from custom_components.opencwb import async_setup_entry
+
+    entry = make_entry()
+    entry.add_to_hass(hass)
+    with (
+        patch.object(
+            hass.config_entries,
+            "async_forward_entry_setups",
+            side_effect=RuntimeError("platform setup failed"),
+        ),
+        patch.object(
+            hass.config_entries,
+            "async_unload_platforms",
+            new=AsyncMock(return_value=True),
+        ),
+        pytest.raises(RuntimeError, match="platform setup failed"),
+    ):
+        await async_setup_entry(hass, entry)
+    assert entry.entry_id not in hass.data["opencwb"]
+    assert not hass.data["opencwb"]["repositories"]
+
+
+async def test_invalid_stored_location_is_classified(hass):
+    from custom_components.opencwb.repository import CwaRepository
+
+    repository = CwaRepository(hass, "test-key")
+    with pytest.raises(CwaError, match="invalid_location"):
+        await repository.snapshot("invalid-town")

@@ -66,7 +66,9 @@ async def async_get_weather(
     coordinator = entities[entity_id]
     await coordinator.async_request_refresh()
     # Recheck after awaits so revoked exposure/permissions cannot leak cached data.
-    if entity_id not in await allowed_entities(hass, context, assistant):
+    if (await allowed_entities(hass, context, assistant)).get(
+        entity_id
+    ) is not coordinator:
         raise HomeAssistantError("CWA weather entity unavailable or access denied")
     if not coordinator.last_update_success:
         raise HomeAssistantError("CWA refresh failed; inspect integration status")

@@ -10,12 +10,11 @@ from homeassistant.core import Context
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.llm import LLM_API_ASSIST, LLMContext, ToolInput
 from homeassistant.setup import async_setup_component
+from test_integration import make_entry, setup
 
 from custom_components.opencwb.diagnostics import async_get_config_entry_diagnostics
 from custom_components.opencwb.llm import GetCWAWeather, async_get_tools
 from custom_components.opencwb.services import async_get_weather
-
-from test_integration import make_entry, setup
 
 pytestmark = pytest.mark.asyncio
 

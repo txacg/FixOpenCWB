@@ -71,12 +71,18 @@ class CwaAPI:
                             if status in (401, 403):
                                 raise CwaError("authorization")
                             if redirects and status in (301, 302, 307, 308):
-                                target = urlsplit(response.headers.get("Location", ""))
+                                try:
+                                    target = urlsplit(
+                                        response.headers.get("Location", "")
+                                    )
+                                    port = target.port
+                                except ValueError:
+                                    raise CwaError("unexpected_redirect") from None
                                 allowed = urlsplit(DISTRIBUTION)
                                 if (
                                     target.scheme,
                                     target.hostname,
-                                    target.port,
+                                    port,
                                     target.path,
                                 ) != (
                                     allowed.scheme,

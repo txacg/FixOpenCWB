@@ -207,3 +207,22 @@ async def test_cancelling_waiter_does_not_cancel_other_entry_and_unload_cancels_
     await cache.close()
     with pytest.raises(asyncio.CancelledError):
         await pending
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://cwaopendata.s3.ap-northeast-1.amazonaws.com:secret/Forecast/F-D0047-093.zip",
+        "https://[invalid/",
+    ],
+)
+def test_malformed_redirect_is_sanitized(target):
+    with (
+        patch(
+            "core.commons.cwa_api.cwa_session",
+            return_value=session(response(302, headers={"Location": target})),
+        ),
+        pytest.raises(CwaError, match="unexpected_redirect") as error,
+    ):
+        CwaAPI("secret").daily_archive()
+    assert "secret" not in str(error.value)

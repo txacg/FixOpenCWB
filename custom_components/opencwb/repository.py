@@ -74,7 +74,10 @@ class CwaRepository:
 
     async def snapshot(self, location: str) -> WeatherSnapshot:
         # Both modes use the same canonical representative coordinates and data.
-        route = resolve_location(location, "hourly")
+        try:
+            route = resolve_location(location, "hourly")
+        except ValueError:
+            raise CwaError("invalid_location") from None
         canonical = (
             route.name if route.name == route.county else route.county + route.name
         )

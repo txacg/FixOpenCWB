@@ -121,3 +121,15 @@ def test_ca_loading_error_is_sanitized():
         pool(CwaTLSAdapter())
     assert "secret-path" not in str(error.value)
     assert error.value.__suppress_context__
+
+
+def test_strict_first_context_preserves_all_default_flags():
+    baseline = ssl.create_default_context(cafile=DEFAULT_CA_BUNDLE_PATH)
+    baseline.verify_flags |= ssl.VERIFY_X509_STRICT
+    before = baseline.verify_flags
+    with patch(
+        "core.commons.cwa_tls.ssl.create_default_context", return_value=baseline
+    ):
+        _, kwargs = pool(CwaTLSAdapter(strict=True))
+    assert kwargs["ssl_context"].verify_flags == before
+    assert baseline.check_hostname and baseline.verify_mode == ssl.CERT_REQUIRED

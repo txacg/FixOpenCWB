@@ -93,6 +93,11 @@ def parse_observations(payload: dict, dataset: str) -> tuple[Observation, ...]:
         result = []
         for station in stations:
             try:
+                if not all(
+                    isinstance(station.get(k), str) and station[k].strip()
+                    for k in ("StationId", "StationName")
+                ):
+                    continue
                 geo = station["GeoInfo"]
                 coordinates = next(
                     c for c in geo["Coordinates"] if c["CoordinateName"] == "WGS84"
@@ -218,7 +223,12 @@ def select_station(
         )
     ]
     if not fresh:
-        return StationSelection(None, None, "stale" if nearby else "unavailable")
+        status = "unavailable"
+        if nearby:
+            status = (
+                "missing_values" if any(o.fresh(now) for o, _ in nearby) else "stale"
+            )
+        return StationSelection(None, None, status)
     # Resolve duplicates by station first: same station's most useful/freshest
     # dataset wins. Missing individual fields remain missing on that station.
     best = {}

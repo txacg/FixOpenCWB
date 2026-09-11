@@ -53,7 +53,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         CONF_LOCATION_NAME: config_entry.data[CONF_LOCATION_NAME],
         "repository_key": key,
     }
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    try:
+        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    except Exception:
+        try:
+            await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+        finally:
+            domain.pop(config_entry.entry_id)
+            await _release(hass, key)
+        raise
     config_entry.async_on_unload(config_entry.add_update_listener(async_update_options))
     from .services import async_register
 
@@ -66,8 +74,8 @@ async def _release(hass, key):
     shared = pool[key]
     shared["users"] -= 1
     if shared["users"] == 0:
-        await shared["repository"].cache.close()
         pool.pop(key)
+        await shared["repository"].cache.close()
 
 
 async def async_update_options(hass, entry):

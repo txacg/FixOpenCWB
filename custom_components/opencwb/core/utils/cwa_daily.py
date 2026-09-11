@@ -4,6 +4,7 @@ from datetime import datetime
 from io import BytesIO
 from xml.etree import ElementTree as ET
 from zipfile import BadZipFile, ZipFile
+from zlib import error as ZlibError
 
 from .cwa_forecast import CwaDataError, CwaForecast, parse_forecast, parse_timestamp
 
@@ -95,5 +96,5 @@ def parse_daily_archive(raw: bytes) -> dict[str, tuple[CwaForecast, datetime]]:
                         raise CwaDataError("Duplicate CWA daily location")
                     result[name] = value
             return result
-    except (BadZipFile, RuntimeError, KeyError, OSError):
+    except (BadZipFile, RuntimeError, KeyError, OSError, ZlibError):
         raise CwaDataError("Malformed CWA daily archive") from None

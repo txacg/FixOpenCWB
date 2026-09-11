@@ -110,9 +110,9 @@ class WeatherSnapshot:
                 "source": "forecast",
                 "dataset": product.dataset,
                 "fetched_at": product.fetched_at.isoformat(),
-                "status": "cached"
-                if kind in self.errors
-                else ("fresh" if periods else "stale"),
+                "status": ("cached" if kind in self.errors else "fresh")
+                if periods
+                else "stale",
                 "periods": periods,
             }
             if product.issued_at:
