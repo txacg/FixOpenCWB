@@ -89,6 +89,56 @@ async def test_tool_requires_assistant_exposure_context(hass):
     assert "error" in result and "current" not in result
 
 
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("晴有閃電", "lightning"),
+        ("特殊天氣描述", None),
+        ("-99", None),
+    ],
+)
+async def test_weather_action_and_tool_preserve_observed_description(
+    hass, api, raw, expected
+):
+    original = api["json"].side_effect
+
+    def fetch(dataset, location=None):
+        data = original(dataset, location)
+        if dataset.startswith("O-"):
+            for station in data["records"]["Station"]:
+                if station["StationId"] == "C0AH10":
+                    station["WeatherElement"]["Weather"] = raw
+        return data
+
+    api["json"].side_effect = fetch
+    entity = await setup(hass, make_entry())
+    await expose(hass, entity.entity_id)
+    result = await GetCWAWeather().async_call(
+        hass,
+        ToolInput(tool_name=GetCWAWeather.name, tool_args={"forecast_type": "none"}),
+        context(),
+    )
+    action = await hass.services.async_call(
+        "opencwb",
+        "get_weather",
+        {"entity_id": entity.entity_id, "forecast_type": "none"},
+        blocking=True,
+        return_response=True,
+    )
+    assert result == action
+    assert entity.condition == result["current"].get("condition") == expected
+    assert result["current"]["temperature"] == entity.native_temperature == 25.6
+    assert result["current"]["station"]["id"] == "C0AH10"
+    assert result["current"]["source"] == "observation"
+    if raw == "-99":
+        assert "weather" not in result["current"]
+        assert result["current"]["quality"]["weather"] == "missing"
+    else:
+        assert result["current"]["weather"] == raw
+    if raw == "特殊天氣描述":
+        assert result["current"]["quality"]["condition"] == "unmapped"
+
+
 async def test_unexposed_entity_and_revocation_are_denied(hass):
     entity = await setup(hass, make_entry())
     await expose(hass, entity.entity_id, False)

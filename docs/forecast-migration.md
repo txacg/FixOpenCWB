@@ -1,5 +1,8 @@
 # Upgrade and forecast behavior in 1.4.0
 
+For the 1.4.1 current-condition follow-up, see the
+[live Weather investigation and regression notes](observation-weather.md).
+
 Target runtime: Home Assistant 2026.9.1 (Python 3.14.2 or later).
 
 ## Existing installations

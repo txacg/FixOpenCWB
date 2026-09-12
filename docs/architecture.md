@@ -46,9 +46,9 @@ The configured place uses its official short-term forecast representative point
 2. O-A0001 observations are usable for 90 minutes; O-A0003 for 30 minutes.
 3. Require at least one of temperature, humidity, pressure or wind speed.
 4. For duplicate station IDs, prefer usable temperature, then newest observation,
-   then number of available fields, then dataset ID.
+   then valid Weather availability, number of available fields, then dataset ID.
 5. Across stations prefer usable temperature, then the configured town (or county
-   for a county query), then distance, then station ID.
+   for a county query), then distance, then valid Weather availability, then station ID.
 
 These are explicit integration selection policies, not a CWA promise that a
 station represents every microclimate. Missing temperature can cause station
@@ -70,8 +70,10 @@ descriptions, not invented exact visibility. Unsourced apparent temperature,
 dew point, numeric weather code or UV remain absent.
 
 Condition mapping uses observation descriptions separately from forecast codes.
-Unknown descriptions/codes are omitted gracefully. Existing current sensors for
-unsourced fields remain registered but show unknown. No cross-station blending.
+Valid unfamiliar raw descriptions remain available with condition quality
+unmapped; missing Weather has an explicit quality flag. Only the normalized
+condition is omitted when unknown. Existing current sensors for
+   unsourced fields remain registered but show unknown. No cross-station blending.
 
 ## Shared cache and lifecycle
 

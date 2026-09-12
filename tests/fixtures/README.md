@@ -1,5 +1,10 @@
 # CWA forecast fixtures
 
+`yonghe_observation_weather_missing.json` is the unmodified C0AH10 station
+record from O-A0001-001 retrieved on 2026-09-12 around 18:12 Taipei, with
+ObsTime 18:00 and Weather="-99". Other station records were removed.
+See [Weather investigation](../../docs/observation-weather.md).
+
 `yonghe_hourly.json` and `yonghe_twice_daily.json` are unmodified weather
 response bodies fetched on 2026-09-10 from the authenticated CWA datastore:
 

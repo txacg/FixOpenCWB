@@ -35,22 +35,72 @@ class StationSelection:
 
 
 def observation_condition(weather: str, daytime: bool = True) -> str | None:
-    """CWA observation descriptions are cloud cover + phenomenon, not Wx codes."""
-    if "雷" in weather:
-        return "lightning-rainy" if "雨" in weather else "lightning"
-    if "雹" in weather or "冰珠" in weather:
-        return "hail"
-    if "雪" in weather:
-        return "snowy-rainy" if "雨" in weather else "snowy"
-    if "雨" in weather:
-        return "pouring" if "大雨" in weather else "rainy"
-    if any(x in weather for x in ("霧", "靄", "霾")):
-        return "fog"
-    return {
+    """Map complete CWA cloud+phenomenon tokens, never arbitrary substrings.
+
+    O-A0001/O-A0003 schema appendix 2 documents three cloud states and
+    phenomenon suffixes. Frozen precipitation takes precedence over thunder
+    because HA cannot express both in one condition. Keep the full raw text.
+    """
+    if not isinstance(weather, str):
+        return None
+    text = "".join(weather.split())
+    clouds = {
         "晴": "sunny" if daytime else "clear-night",
         "多雲": "partlycloudy",
         "陰": "cloudy",
-    }.get(weather)
+    }
+    phenomena = {
+        "有霾": "fog",
+        "有靄": "fog",
+        "有霧": "fog",
+        "有閃電": "lightning",
+        "有雷聲": "lightning",
+        "有雷": "lightning",
+        "有雨": "rainy",
+        "有陣雨": "rainy",
+        "有雨雪": "snowy-rainy",
+        "陣雨雪": "snowy-rainy",
+        "有大雪": "snowy",
+        "有雪珠": "snowy",
+        "有雷雪": "snowy",
+        "有冰珠": "hail",
+        "有雹": "hail",
+        "有雷雹": "hail",
+        "大雷雹": "hail",
+        "有雷雨": "lightning-rainy",
+        "大雷雨": "lightning-rainy",
+    }
+    for cloud, condition in clouds.items():
+        if text.startswith(cloud):
+            suffix = text[len(cloud) :]
+            return condition if suffix in ("", "-") else phenomena.get(suffix)
+    return None
+
+
+def _weather_description(raw: Any, quality: dict[str, str]) -> str | None:
+    """Preserve non-sentinel source text independently of HA mapping support."""
+    if not isinstance(raw, str):
+        quality["weather"] = (
+            "missing" if raw is None or raw in (-99, -98) else "invalid"
+        )
+        return None
+    text = raw.strip()
+    if text in ("", "-", "--", "-99", "-99.0", "-98", "-98.0"):
+        quality["weather"] = "missing"
+        return None
+    if text in ("X", "T"):
+        quality["weather"] = "equipment_error" if text == "X" else "invalid"
+        return None
+    try:
+        numeric = float(text)
+    except ValueError:
+        pass
+    else:
+        quality["weather"] = "missing" if numeric in (-99, -98) else "invalid"
+        return None
+    if observation_condition(text) is None:
+        quality["condition"] = "unmapped"
+    return text
 
 
 def _measurement(raw: Any, field: str, quality: dict[str, str]) -> float | None:
@@ -153,9 +203,9 @@ def parse_observations(payload: dict, dataset: str) -> tuple[Observation, ...]:
                             values.update(
                                 wind_gust=gust, gust_observed_at=gust_time.isoformat()
                             )
-                weather = elements.get("Weather")
-                if isinstance(weather, str) and observation_condition(weather.strip()):
-                    values["weather"] = weather.strip()
+                weather = _weather_description(elements.get("Weather"), quality)
+                if weather is not None:
+                    values["weather"] = weather
                 visibility = elements.get("VisibilityDescription")
                 if isinstance(visibility, str) and visibility.strip() not in (
                     "",
@@ -237,6 +287,7 @@ def select_station(
         key=lambda row: (
             "temperature" not in row[0].values,
             -row[0].observed_at.timestamp(),
+            "weather" not in row[0].values,
             -len(row[0].values),
             row[0].dataset,
         ),
@@ -248,6 +299,7 @@ def select_station(
             "temperature" not in row[0].values,
             not (row[0].county == county and (town == county or row[0].town == town)),
             row[1],
+            "weather" not in row[0].values,
             row[0].station_id,
         ),
     )
