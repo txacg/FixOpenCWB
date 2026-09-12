@@ -1,5 +1,7 @@
 """Support for the OpenCWB (OCWB) service."""
 
+from datetime import timedelta
+
 from homeassistant.components.weather import (
     Forecast,
     SingleCoordinatorWeatherEntity,
@@ -16,6 +18,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.util import dt
 
 from .const import (
@@ -69,6 +72,7 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
         self._attr_name = name
         self._attr_unique_id = unique_id
         self._weather_coordinator = weather_coordinator
+        self._display_expiry_unsub = None
         split_unique_id = unique_id.split("-")
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
@@ -89,7 +93,9 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
     @property
     def condition(self):
         """Return the current condition."""
-        return self._weather_coordinator.current.get("condition")
+        return self._weather_coordinator.data.display_condition(dt.utcnow())[
+            "condition"
+        ]
 
     @property
     def available(self):
@@ -105,6 +111,41 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
     async def async_added_to_hass(self):
         """Register the base listener that updates state AND forecast subscribers."""
         await super().async_added_to_hass()
+        self.async_on_remove(self._cancel_display_expiry)
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self._schedule_display_expiry)
+        )
+        self._schedule_display_expiry()
+
+    @callback
+    def _cancel_display_expiry(self):
+        if self._display_expiry_unsub:
+            self._display_expiry_unsub()
+            self._display_expiry_unsub = None
+
+    @callback
+    def _schedule_display_expiry(self):
+        self._cancel_display_expiry()
+        now = dt.utcnow()
+        display = self.coordinator.data.display_condition(now)
+        deadline = None
+        if display["source"] == "last_observation":
+            deadline = dt.parse_datetime(display["observed_at"]) + timedelta(
+                minutes=self.coordinator.condition_max_age_minutes, microseconds=1
+            )
+        elif display["source"] == "forecast_fallback":
+            deadline = dt.parse_datetime(display["valid_until"])
+        if deadline is not None and deadline > now:
+
+            @callback
+            def expire(_now):
+                self._display_expiry_unsub = None
+                self.async_write_ha_state()
+                self._schedule_display_expiry()
+
+            self._display_expiry_unsub = async_track_point_in_utc_time(
+                self.hass, expire, deadline
+            )
 
     @property
     def cloud_coverage(self) -> float | None:
@@ -171,7 +212,11 @@ class OpenCWBWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
     @property
     def extra_state_attributes(self):
         data = self._weather_coordinator.data.structured(dt.utcnow(), (), 1)
-        return {"observation": data["current"], "data_errors": data["errors"]}
+        return {
+            "observation": data["current"],
+            "display_condition": data["display_condition"],
+            "data_errors": data["errors"],
+        }
 
     @callback
     def _async_forecast_daily(self) -> list[Forecast] | None:

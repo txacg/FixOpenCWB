@@ -2,7 +2,7 @@
   "domain": "opencwb",
   "name": "OpenCWA",
   "config_flow": true,
-  "version": "1.4.1",
+  "version": "1.4.2",
   "documentation": "https://github.com/txacg/FixOpenCWB",
   "issue_tracker": "https://github.com/txacg/FixOpenCWB/issues",
   "requirements": [

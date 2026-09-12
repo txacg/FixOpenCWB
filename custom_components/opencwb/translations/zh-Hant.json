@@ -21,10 +21,16 @@
           "latitude": "緯度",
           "longitude": "經度",
           "mode": "模式",
-          "name": "整合名稱"
+          "name": "整合名稱",
+          "condition_policy": "目前天氣圖示的備援政策",
+          "condition_max_age_minutes": "同站歷史天氣最長有效時間（分鐘）"
         },
         "description": "使用 CWA 開放資料 API 金鑰設定整合。一週預報為白天／晚上兩個時段。",
-        "title": "OpenCWA"
+        "title": "OpenCWA",
+        "data_description": {
+          "condition_policy": "建議嚴格使用觀測。備援只影響天氣實體圖示，原始觀測仍保留缺測與來源。",
+          "condition_max_age_minutes": "僅供同站歷史觀測政策使用，1–120 分鐘，預設 30；以原始觀測時間計算，HA 重啟後需重新累積。"
+        }
       },
       "reauth_confirm": {
         "title": "更新 CWA API 金鑰",
@@ -39,9 +45,15 @@
       "init": {
         "data": {
           "language": "語言",
-          "mode": "模式"
+          "mode": "模式",
+          "condition_policy": "目前天氣圖示的備援政策",
+          "condition_max_age_minutes": "同站歷史天氣最長有效時間（分鐘）"
         },
-        "description": "選擇主要預報產品。目前天氣使用測站觀測；逐日預報另由官方 24 小時產品提供。舊設定與實體識別碼會保留。"
+        "description": "選擇主要預報產品。目前天氣使用測站觀測；逐日預報另由官方 24 小時產品提供。舊設定與實體識別碼會保留。",
+        "data_description": {
+          "condition_policy": "建議嚴格使用觀測。備援只影響天氣實體圖示，原始觀測仍保留缺測與來源。",
+          "condition_max_age_minutes": "僅供同站歷史觀測政策使用，1–120 分鐘，預設 30；以原始觀測時間計算，HA 重啟後需重新累積。"
+        }
       }
     },
     "error": {
@@ -58,6 +70,13 @@
       "options": {
         "hourly": "短期逐時預報",
         "twice_daily": "一週日間／夜間預報"
+      }
+    },
+    "condition_policy": {
+      "options": {
+        "strict_observation": "嚴格觀測（預設、建議）",
+        "last_valid_observation": "同一測站最近有效觀測",
+        "forecast_fallback": "使用預報作為顯示備援"
       }
     }
   }

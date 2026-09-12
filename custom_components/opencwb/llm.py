@@ -19,6 +19,9 @@ PROMPT = (
     "not a forecast. Respect source, observed_at, period start/end, status and quality. "
     "Times are UTC; interpret local days in Asia/Taipei. Missing or trace values are not zero. "
     "Never describe stale or unavailable data as current."
+    " current is authoritative observation data; display_condition is dashboard presentation. "
+    "Never report a forecast_fallback or last_observation display value as a current observation. "
+    "If explaining a display fallback, state its source and original timestamp or validity interval."
 )
 
 

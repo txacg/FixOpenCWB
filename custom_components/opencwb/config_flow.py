@@ -19,6 +19,15 @@ from .const import (
     FORECAST_MODES,
 )
 from .core.commons.cwa_api import CwaAPI, CwaError
+from .core.utils.cwa_display import (
+    CONDITION_POLICIES,
+    CONF_CONDITION_MAX_AGE,
+    CONF_CONDITION_POLICY,
+    DEFAULT_CONDITION_MAX_AGE,
+    DEFAULT_CONDITION_POLICY,
+    MAX_CONDITION_AGE,
+    condition_settings,
+)
 from .core.utils.cwa_forecast import CwaDataError, parse_forecast
 from .core.utils.cwa_location import forecast_type_for_mode, resolve_location
 
@@ -27,6 +36,27 @@ MODE_SELECTOR = selector.SelectSelector(
         options=FORECAST_MODES, translation_key="forecast_mode"
     )
 )
+CONDITION_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=list(CONDITION_POLICIES), translation_key="condition_policy"
+    )
+)
+CONDITION_AGE_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=1,
+        max=MAX_CONDITION_AGE,
+        step=1,
+        unit_of_measurement="min",
+        mode=selector.NumberSelectorMode.BOX,
+    )
+)
+
+
+def _condition_fields(policy=DEFAULT_CONDITION_POLICY, age=DEFAULT_CONDITION_MAX_AGE):
+    return {
+        vol.Optional(CONF_CONDITION_POLICY, default=policy): CONDITION_SELECTOR,
+        vol.Optional(CONF_CONDITION_MAX_AGE, default=age): CONDITION_AGE_SELECTOR,
+    }
 
 
 async def _validate(hass, api_key: str, location: str, mode: str) -> str | None:
@@ -68,6 +98,10 @@ class OpenCWBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             mode = user_input.get(CONF_MODE, DEFAULT_FORECAST_MODE)
+            policy, age = condition_settings(
+                user_input.get(CONF_CONDITION_POLICY, DEFAULT_CONDITION_POLICY),
+                user_input.get(CONF_CONDITION_MAX_AGE, DEFAULT_CONDITION_MAX_AGE),
+            )
             location = user_input[CONF_LOCATION_NAME]
             error = await _validate(self.hass, user_input[CONF_API_KEY], location, mode)
             if error:
@@ -84,6 +118,8 @@ class OpenCWBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         **user_input,
                         CONF_MODE: mode,
                         CONF_NAME: user_input.get(CONF_NAME, DEFAULT_NAME),
+                        CONF_CONDITION_POLICY: policy,
+                        CONF_CONDITION_MAX_AGE: age,
                     },
                 )
         return self.async_show_form(
@@ -96,6 +132,7 @@ class OpenCWBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_MODE, default=DEFAULT_FORECAST_MODE
                     ): MODE_SELECTOR,
+                    **_condition_fields(),
                 }
             ),
             errors=errors,
@@ -135,8 +172,20 @@ class OpenCWBOptionsFlow(config_entries.OptionsFlow):
         mode = forecast_type_for_mode(
             _get_config_value(self.config_entry, CONF_MODE, DEFAULT_FORECAST_MODE)
         )
+        policy, age = condition_settings(
+            _get_config_value(
+                self.config_entry, CONF_CONDITION_POLICY, DEFAULT_CONDITION_POLICY
+            ),
+            _get_config_value(
+                self.config_entry, CONF_CONDITION_MAX_AGE, DEFAULT_CONDITION_MAX_AGE
+            ),
+        )
         if user_input is not None:
             mode = user_input.get(CONF_MODE, mode)
+            policy, age = condition_settings(
+                user_input.get(CONF_CONDITION_POLICY, policy),
+                user_input.get(CONF_CONDITION_MAX_AGE, age),
+            )
             error = await _validate(
                 self.hass,
                 self.config_entry.data[CONF_API_KEY],
@@ -148,12 +197,21 @@ class OpenCWBOptionsFlow(config_entries.OptionsFlow):
             else:
                 return self.async_create_entry(
                     title="",
-                    data={**self.config_entry.options, **user_input, CONF_MODE: mode},
+                    data={
+                        **self.config_entry.options,
+                        **user_input,
+                        CONF_MODE: mode,
+                        CONF_CONDITION_POLICY: policy,
+                        CONF_CONDITION_MAX_AGE: age,
+                    },
                 )
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
-                {vol.Optional(CONF_MODE, default=mode): MODE_SELECTOR}
+                {
+                    vol.Optional(CONF_MODE, default=mode): MODE_SELECTOR,
+                    **_condition_fields(policy, age),
+                }
             ),
             errors=errors,
         )

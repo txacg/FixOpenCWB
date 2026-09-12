@@ -4,6 +4,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from .cwa_display import (
+    DEFAULT_CONDITION_MAX_AGE,
+    DEFAULT_CONDITION_POLICY,
+    ObservedWeather,
+    display_condition,
+)
 from .cwa_forecast import CwaForecast, to_ha_forecast
 from .cwa_observation import StationSelection, observation_condition
 
@@ -35,6 +41,9 @@ class WeatherSnapshot:
     errors: dict[str, str] = field(default_factory=dict)
     daytime: bool = True
     daylight: dict[str, bool] = field(default_factory=dict)
+    condition_policy: str = DEFAULT_CONDITION_POLICY
+    condition_max_age_minutes: int = DEFAULT_CONDITION_MAX_AGE
+    last_observed_weather: ObservedWeather | None = None
 
     def current_values(self, now: datetime) -> dict[str, Any]:
         obs = self.observation.observation
@@ -56,7 +65,11 @@ class WeatherSnapshot:
         ]
 
     def structured(self, now: datetime, kinds: tuple[str, ...], count: int) -> dict:
-        current = {"source": "observation", "status": self.observation.status}
+        current = {
+            "source": "observation",
+            "status": self.observation.status,
+            "condition": None,
+        }
         obs = self.observation.observation
         if obs:
             fresh = obs.fresh(now)
@@ -123,6 +136,10 @@ class WeatherSnapshot:
             "updated_at": self.updated_at.isoformat(),
             "units": dict(UNITS),
             "current": current,
+            "display_condition": self.display_condition(now),
             "forecasts": forecasts,
             "errors": dict(self.errors),
         }
+
+    def display_condition(self, now: datetime) -> dict:
+        return display_condition(self, now)

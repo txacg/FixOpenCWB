@@ -14,13 +14,16 @@ async def async_get_config_entry_diagnostics(hass, config_entry):
         return {"status": "not_loaded"}
     coordinator = runtime[ENTRY_WEATHER_COORDINATOR]
     snapshot = coordinator.data
-    current = snapshot.structured(dt.utcnow(), (), 1)["current"]
+    data = snapshot.structured(dt.utcnow(), (), 1)
     integration = await async_get_integration(hass, DOMAIN)
     return {
         "version": integration.version,
         "location": snapshot.location,
         "mode": coordinator.forecast_type,
-        "current": current,
+        "current": data["current"],
+        "display_condition": data["display_condition"],
+        "condition_policy": coordinator.condition_policy,
+        "condition_max_age_minutes": coordinator.condition_max_age_minutes,
         "updated_at": snapshot.updated_at.isoformat(),
         "errors": dict(snapshot.errors),
         "forecast_datasets": {

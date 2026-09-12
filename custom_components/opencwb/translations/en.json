@@ -21,10 +21,16 @@
           "latitude": "Latitude",
           "longitude": "Longitude",
           "mode": "Mode",
-          "name": "Name of the integration"
+          "name": "Name of the integration",
+          "condition_policy": "Current condition display policy",
+          "condition_max_age_minutes": "Maximum age of same-station weather (minutes)"
         },
         "description": "Set up CWA open data. Weekly forecasts contain separate daytime and nighttime periods.",
-        "title": "OpenCWA"
+        "title": "OpenCWA",
+        "data_description": {
+          "condition_policy": "Strict observation is recommended. Fallback affects the weather entity display only; authoritative observations retain missing values and provenance.",
+          "condition_max_age_minutes": "Used only by last valid observation: 1–120 minutes, default 30, measured from the original observation time. History restarts after HA restart."
+        }
       },
       "reauth_confirm": {
         "title": "Update CWA API key",
@@ -39,9 +45,15 @@
       "init": {
         "data": {
           "language": "Language",
-          "mode": "Mode"
+          "mode": "Mode",
+          "condition_policy": "Current condition display policy",
+          "condition_max_age_minutes": "Maximum age of same-station weather (minutes)"
         },
-        "description": "Select the primary forecast product. Current weather uses station observations; daily forecasts additionally use the official 24-hour product. Existing identities are preserved."
+        "description": "Select the primary forecast product. Current weather uses station observations; daily forecasts additionally use the official 24-hour product. Existing identities are preserved.",
+        "data_description": {
+          "condition_policy": "Strict observation is recommended. Fallback affects the weather entity display only; authoritative observations retain missing values and provenance.",
+          "condition_max_age_minutes": "Used only by last valid observation: 1–120 minutes, default 30, measured from the original observation time. History restarts after HA restart."
+        }
       }
     },
     "error": {
@@ -58,6 +70,13 @@
       "options": {
         "hourly": "Short-term hourly forecast",
         "twice_daily": "One-week day/night forecast"
+      }
+    },
+    "condition_policy": {
+      "options": {
+        "strict_observation": "Strict observation (default, recommended)",
+        "last_valid_observation": "Last valid observation from the same station",
+        "forecast_fallback": "Forecast condition for display"
       }
     }
   }

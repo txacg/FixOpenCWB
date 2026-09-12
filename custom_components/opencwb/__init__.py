@@ -5,6 +5,7 @@ from hashlib import sha256
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_MODE, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt
 
 from .const import (
     CONF_LOCATION_NAME,
@@ -13,6 +14,13 @@ from .const import (
     ENTRY_NAME,
     ENTRY_WEATHER_COORDINATOR,
     PLATFORMS,
+)
+from .core.utils.cwa_display import (
+    CONF_CONDITION_MAX_AGE,
+    CONF_CONDITION_POLICY,
+    DEFAULT_CONDITION_MAX_AGE,
+    DEFAULT_CONDITION_POLICY,
+    ObservationWeatherHistory,
 )
 from .repository import CwaRepository
 from .weather_update_coordinator import WeatherUpdateCoordinator
@@ -26,10 +34,19 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     domain = hass.data.setdefault(DOMAIN, {})
     pool = domain.setdefault("repositories", {})
+    histories = domain.setdefault("condition_histories", {})
+    for old_key, history in list(histories.items()):
+        history.prune(dt.utcnow())
+        if not history.records and old_key not in pool:
+            histories.pop(old_key)
     key = sha256(config_entry.data[CONF_API_KEY].encode()).digest()
     if key not in pool:
         pool[key] = {
-            "repository": CwaRepository(hass, config_entry.data[CONF_API_KEY]),
+            "repository": CwaRepository(
+                hass,
+                config_entry.data[CONF_API_KEY],
+                histories.setdefault(key, ObservationWeatherHistory()),
+            ),
             "users": 0,
         }
     shared = pool[key]
@@ -40,6 +57,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         _get_config_value(config_entry, CONF_MODE, DEFAULT_FORECAST_MODE),
         hass,
         config_entry,
+        condition_policy=_get_config_value(
+            config_entry, CONF_CONDITION_POLICY, DEFAULT_CONDITION_POLICY
+        ),
+        condition_max_age_minutes=_get_config_value(
+            config_entry, CONF_CONDITION_MAX_AGE, DEFAULT_CONDITION_MAX_AGE
+        ),
     )
     try:
         await coordinator.async_config_entry_first_refresh()

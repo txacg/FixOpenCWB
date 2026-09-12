@@ -71,7 +71,7 @@ def test_unknown_valid_raw_survives_without_substring_guessing(raw):
     assert obs.quality["condition"] == "unmapped"
     model = WeatherSnapshot("新北市永和區", 25.01, 121.51, select([obs]), {}, NOW)
     current = model.structured(NOW, (), 1)["current"]
-    assert current["weather"] == raw and "condition" not in current
+    assert current["weather"] == raw and current["condition"] is None
     assert current["source"] == "observation"
     assert current["station"]["id"] == "C0AH10"
     assert current["observed_at"] == obs.observed_at.isoformat()
@@ -103,7 +103,7 @@ def test_missing_and_special_weather_do_not_remove_measurements(raw, status):
     model = WeatherSnapshot("新北市永和區", 25.01, 121.51, select([obs]), {}, NOW)
     current = model.structured(NOW, (), 1)["current"]
     assert current["temperature"] == 25.6
-    assert "weather" not in current and "condition" not in current
+    assert "weather" not in current and current["condition"] is None
     # Rainfall accumulated earlier today is not evidence of current rain.
     assert current["precipitation_today"] == 8.5
 

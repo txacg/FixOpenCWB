@@ -138,7 +138,12 @@ async def test_two_choice_options_and_aliases(hass, api, legacy, modern):
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"mode": "twice_daily"}
     )
-    assert result["data"] == {"language": "en", "mode": "twice_daily"}
+    assert result["data"] == {
+        "language": "en",
+        "mode": "twice_daily",
+        "condition_policy": "strict_observation",
+        "condition_max_age_minutes": 30,
+    }
     assert entry.unique_id == quote_plus("永和區") + "-" + legacy
     assert api["json"].call_args.args[0] == "F-D0047-071"
 

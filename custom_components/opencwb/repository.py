@@ -9,6 +9,7 @@ from homeassistant.util import dt
 from .core.commons.cwa_api import CwaAPI, CwaError
 from .core.utils.cwa_cache import DataCache
 from .core.utils.cwa_daily import parse_daily_archive
+from .core.utils.cwa_display import ObservationWeatherHistory
 from .core.utils.cwa_forecast import TAIPEI, CwaDataError, parse_forecast
 from .core.utils.cwa_location import resolve_location
 from .core.utils.cwa_model import ForecastProduct, WeatherSnapshot
@@ -34,10 +35,15 @@ def forecast_ttl(kind: str, now: datetime) -> float:
 
 
 class CwaRepository:
-    def __init__(self, hass, api_key: str):
+    def __init__(self, hass, api_key: str, condition_history=None):
         self.hass = hass
         self.api = CwaAPI(api_key)
         self.cache = DataCache()
+        self.condition_history = (
+            condition_history
+            if condition_history is not None
+            else ObservationWeatherHistory()
+        )
 
     async def forecast(self, location: str, kind: str):
         route = resolve_location(location, kind)
@@ -138,6 +144,10 @@ class CwaRepository:
             if lat is not None and lon is not None
             else StationSelection(None, None, "missing_coordinates")
         )
+        station_id = selection.observation.station_id if selection.observation else None
+        self.condition_history.remember(
+            tuple(o for o in observations if o.station_id == station_id), now
+        )
         daylight = {
             period.start.isoformat(): sun.is_up(self.hass, period.start)
             for product in products.values()
@@ -153,4 +163,5 @@ class CwaRepository:
             errors,
             sun.is_up(self.hass, now),
             daylight,
+            last_observed_weather=self.condition_history.records.get(station_id),
         )
