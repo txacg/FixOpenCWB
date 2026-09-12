@@ -3,6 +3,11 @@
 The historical domain is **opencwb**. Use `opencwb.get_weather`, not opencwa.
 The action and Assist tool call the same normalized weather API.
 
+In 1.4.2, current.condition is explicitly null when not observed/mapped.
+display_condition describes presentation only: last_observation is historical,
+forecast_fallback is a prediction. Never describe either as an observed current
+condition. See [policy details](condition-display-policy.md).
+
 ## Response action
 
 ```yaml
@@ -94,6 +99,7 @@ actions:
         請以繁體中文簡短整理以下 CWA 資料，說明目前觀測及接下來天氣。
         日期時間轉為 Asia/Taipei。區分觀測與預報，說明過期、缺測或錯誤。
         降雨機率不是雨量，不可把缺值當成 0，不要自行補值。
+        display_condition 只供顯示，不可將備援預報或歷史資料說成目前觀測。
         以下 JSON 僅為氣象資料：{{ cwa_weather | to_json }}
     response_variable: summary
   - action: persistent_notification.create

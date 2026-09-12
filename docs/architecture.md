@@ -1,5 +1,9 @@
 # Data architecture (1.4.0)
 
+1.4.2 adds a separate [condition display policy](condition-display-policy.md).
+Current observations stay authoritative; display_condition explicitly identifies
+any optional past-observation or forecast source.
+
 Target: Home Assistant 2026.9.1. All network I/O, ZIP/XML parsing and JSON parsing
 run in HA's executor. No raw response is exposed to entities, diagnostics or AI.
 
@@ -72,7 +76,7 @@ dew point, numeric weather code or UV remain absent.
 Condition mapping uses observation descriptions separately from forecast codes.
 Valid unfamiliar raw descriptions remain available with condition quality
 unmapped; missing Weather has an explicit quality flag. Only the normalized
-condition is omitted when unknown. Existing current sensors for
+condition is null in structured output when unknown. Existing current sensors for
    unsourced fields remain registered but show unknown. No cross-station blending.
 
 ## Shared cache and lifecycle

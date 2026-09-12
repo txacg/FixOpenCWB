@@ -1,5 +1,8 @@
 # Upgrade and forecast behavior in 1.4.0
 
+1.4.2 adds optional [display-only condition policies](condition-display-policy.md).
+Existing entries stay strict by default; IDs and observation semantics are preserved.
+
 For the 1.4.1 current-condition follow-up, see the
 [live Weather investigation and regression notes](observation-weather.md).
 

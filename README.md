@@ -9,6 +9,10 @@ data. Current values come from real stations, never from forecast rows.
 Forecasts support short-term hourly, one-week day/night and official calendar-day
 products. Missing measurements stay missing.
 
+The [current-condition display policy](docs/condition-display-policy.md) defaults
+to strict observation. Optional same-station history or forecast icons have
+separate provenance; structured current observations remain unchanged.
+
 ## Install and upgrade
 
 Add `txacg/FixOpenCWB` as an Integration custom repository in HACS, or copy

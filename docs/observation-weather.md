@@ -1,5 +1,9 @@
 # Current Weather diagnostics (1.4.1)
 
+In 1.4.2, unavailable current.condition is explicitly null and optional
+[display fallback](condition-display-policy.md) is separate from current data.
+The investigation and missing-Weather evidence below remain applicable.
+
 ## Live investigation
 
 Read-only API checks on 2026-09-12 around 18:12 Asia/Taipei found:
