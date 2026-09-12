@@ -1,0 +1,71 @@
+{
+  "success": "true",
+  "records": {
+    "Station": [
+      {
+        "StationName": "永和",
+        "StationId": "C0AH10",
+        "ObsTime": {
+          "DateTime": "2026-09-12T18:00:00+08:00"
+        },
+        "GeoInfo": {
+          "Coordinates": [
+            {
+              "CoordinateName": "TWD67",
+              "CoordinateFormat": "decimal degrees",
+              "StationLatitude": "25.013028",
+              "StationLongitude": "121.499889"
+            },
+            {
+              "CoordinateName": "WGS84",
+              "CoordinateFormat": "decimal degrees",
+              "StationLatitude": "25.011250",
+              "StationLongitude": "121.508111"
+            }
+          ],
+          "StationAltitude": "30.0",
+          "CountyName": "新北市",
+          "TownName": "永和區",
+          "CountyCode": "65000",
+          "TownCode": "65000040"
+        },
+        "WeatherElement": {
+          "Weather": "-99",
+          "Now": {
+            "Precipitation": "2.5"
+          },
+          "WindDirection": "73.0",
+          "WindSpeed": "2.8",
+          "AirTemperature": "27.6",
+          "RelativeHumidity": "89",
+          "AirPressure": "1010.9",
+          "GustInfo": {
+            "PeakGustSpeed": "-99",
+            "Occurred_at": {
+              "WindDirection": "-99",
+              "DateTime": "-99"
+            }
+          },
+          "DailyExtreme": {
+            "DailyHigh": {
+              "TemperatureInfo": {
+                "AirTemperature": "30.7",
+                "Occurred_at": {
+                  "DateTime": "2026-09-12T12:20:00+08:00"
+                }
+              }
+            },
+            "DailyLow": {
+              "TemperatureInfo": {
+                "AirTemperature": "25.9",
+                "Occurred_at": {
+                  "DateTime": "2026-09-12T04:40:00+08:00"
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

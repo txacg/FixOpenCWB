@@ -1,39 +1,75 @@
-<a href="https://www.buymeacoffee.com/tsunglung" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="30" width="120"></a>
+# OpenCWA for Home Assistant
 
-Home assistant support for [Opendata CWA](https://opendata.cwa.gov.tw/index) (prvious Opendata CWB). [The readme in Traditional Chinese](https://github.com/tsunglung/OpenCWB/blob/master/README_zh-tw.md).
+CWA station observations and official Taiwan forecasts for Home Assistant **2026.9.1**.
+Maintained at [txacg/FixOpenCWB](https://github.com/txacg/FixOpenCWB).
+[繁體中文](README_zh-tw.md).
 
+Current weather, sensors, automations and Assist tools use the same normalized
+data. Current values come from real stations, never from forecast rows.
+Forecasts support short-term hourly, one-week day/night and official calendar-day
+products. Missing measurements stay missing.
 
-This integration is based on [OpenWeatherMap](https://openweathermap.org) ([@csparpa](https://pypi.org/user/csparpa), [pyowm](https://github.com/csparpa/pyowm)) to develop.
+The [current-condition display policy](docs/condition-display-policy.md) defaults
+to strict observation. Optional same-station history or forecast icons have
+separate provenance; structured current observations remain unchanged.
 
-## Install
+## Install and upgrade
 
-You can install component with [HACS](https://hacs.xyz/) custom repo: HACS > Integrations > 3 dots (upper top corner) > Custom repositories > URL: `tsunglung/OpenCWB` > Category: Integration
+Add `txacg/FixOpenCWB` as an Integration custom repository in HACS, or copy
+`custom_components/opencwb` into your Home Assistant configuration's
+`custom_components` directory. Restart Home Assistant.
+While this change is a Draft PR, install the reviewed development branch
+`fix/cwa-forecast-correctness`; master does not contain this work yet.
 
-Or manually copy `opencwb` folder to `custom_components` folder in your config folder.
+Obtain your own key from the [CWA open-data platform](https://opendata.cwa.gov.tw/).
+In Settings → Devices & services, add OpenCWA and enter the key and a location,
+for example `新北市永和區`. Include the county/city for ambiguous town names.
+Choose Short-term hourly forecast or One-week day/night forecast.
 
-Then restart HA.
+**Existing users: retain your entries.** The `opencwb` domain, stored unique IDs,
+device identifiers and existing weather/sensor entities are preserved.
+Old `daily` / `onecall_daily` options mean day/night; old `onecall_hourly` means
+hourly. See [upgrade notes](docs/forecast-migration.md) before changing cards.
+No deletion or re-creation of entries is required.
 
-# Setup
+## Weather cards and AI
 
-**Apply a API key in Opendata CWA**
-1. Open the [Opendata CWA](https://opendata.cwa.gov.tw/devManual/insrtuction) Web Site
-2. Register your account
-3. Get your personal API Key.
+The selected mode controls the weather entity's primary forecast and existing
+forecast sensors. True `daily` is additionally available when CWA's official
+Week24 product is loaded. For example:
 
-# Config
+```yaml
+type: weather-forecast
+entity: weather.your_existing_entity
+forecast_type: daily
+```
 
-**Please use the config flow of Home Assistant**
+Use `twice_daily` for separate day/night periods, or `hourly` on an hourly entry.
+CWA's short-term timeline becomes three-hourly later in its range; no interpolation
+or invented one-hour rain probabilities are applied.
 
+[AI and automation examples](docs/ai-weather.md) cover
+`opencwb.get_weather`, the contributed `opencwb__GetCWAWeather` Assist tool, and
+a scheduled `ai_task.generate_data` summary. The response action works even if
+your AI provider does not support tool calling.
 
-1. With GUI. Configuration > Integration > Add Integration > OpneCWA
-   1. If the integration didn't show up in the list please REFRESH the page
-   2. If the integration is still not in the list, you need to clear the browser cache.
-2. Enter API key.
-3. Enter the location name of Taiwan. Please reference to the name in the [doc](https://opendata.cwa.gov.tw/opendatadoc/Opendata_City.pdf).
-   1. Some location name need to include the city name.
+[Architecture and source semantics](docs/architecture.md) explain station
+selection, freshness, caching, dataset IDs and the legacy-code audit.
+[Upgrade and TLS notes](docs/forecast-migration.md) include real-installation checks.
 
-Buy Me A Coffee
+## Development
 
-|  LINE Pay | LINE Bank | JKao Pay |
-| :------------: | :------------: | :------------: |
-| <img src="https://github.com/tsunglung/OpenCWB/blob/master/linepay.jpg" alt="Line Pay" height="200" width="200">  | <img src="https://github.com/tsunglung/OpenCWB/blob/master/linebank.jpg" alt="Line Bank" height="200" width="200">  | <img src="https://github.com/tsunglung/OpenCWB/blob/master/jkopay.jpg" alt="JKo Pay" height="200" width="200">  |
+`python -m pip install -r requirements_test.txt`, then `python -m pytest -q`.
+Pure parser/transport tests run on Python 3.11+. Full HA tests require Linux,
+Python 3.14.2+ and `pytest-homeassistant-custom-component==0.13.364`, which pins
+Home Assistant 2026.9.1. CI runs the complete suite without live API keys.
+
+Report issues at [this fork's issue tracker](https://github.com/txacg/FixOpenCWB/issues)
+with downloaded integration diagnostics. Do not post API keys or credential-bearing URLs.
+
+## Credits
+
+Forked from [tsunglung/OpenCWB](https://github.com/tsunglung/OpenCWB).
+The original integration included code derived from
+[csparpa/pyowm](https://github.com/csparpa/pyowm). Original license and attribution
+are retained. Data is provided by Taiwan's Central Weather Administration (中央氣象署).

@@ -1,4 +1,4 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from .ocwb import OCWB
+"""CWA parsing and transport helpers; legacy clients are not imported eagerly."""

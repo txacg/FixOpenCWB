@@ -1,35 +1,83 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_location%]"
-        },
-        "error": {
-            "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
-            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "api_key": "[%key:common::config_flow::data::api_key%]",
-                    "language": "Language",
-                    "latitude": "[%key:common::config_flow::data::latitude%]",
-                    "longitude": "[%key:common::config_flow::data::longitude%]",
-                    "mode": "[%key:common::config_flow::data::mode%]",
-                    "name": "Name of the integration"
-                },
-                "description": "Set up OpenWeatherMap integration. To generate API key go to https://openweathermap.org/appid",
-                "title": "OpenWeatherMap"
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_location%]",
+      "reauth_successful": "API key updated successfully."
     },
-    "options": {
-        "step": {
-            "init": {
-                "data": {
-                    "language": "Language",
-                    "mode": "[%key:common::config_flow::data::mode%]"
-                }
-            }
+    "error": {
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
+      "invalid_data": "CWA returned invalid or incomplete forecast data.",
+      "timeout": "CWA request timed out; try again later.",
+      "tls": "CWA TLS certificate validation failed; inspect integration diagnostics."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "[%key:common::config_flow::data::api_key%]",
+          "language": "Language",
+          "latitude": "[%key:common::config_flow::data::latitude%]",
+          "longitude": "[%key:common::config_flow::data::longitude%]",
+          "mode": "[%key:common::config_flow::data::mode%]",
+          "name": "Name of the integration",
+          "location_name": "County/city or township",
+          "condition_policy": "Current condition display policy",
+          "condition_max_age_minutes": "Maximum age of same-station weather (minutes)"
+        },
+        "description": "Set up CWA open data. Weekly forecasts contain separate daytime and nighttime periods.",
+        "title": "OpenCWA",
+        "data_description": {
+          "condition_policy": "Strict observation is recommended. Fallback affects the weather entity display only; authoritative observations retain missing values and provenance.",
+          "condition_max_age_minutes": "Used only by last valid observation: 1–120 minutes, default 30, measured from the original observation time. History restarts after HA restart."
         }
+      },
+      "reauth_confirm": {
+        "title": "Update CWA API key",
+        "data": {
+          "api_key": "API key"
+        }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "language": "Language",
+          "mode": "[%key:common::config_flow::data::mode%]",
+          "condition_policy": "Current condition display policy",
+          "condition_max_age_minutes": "Maximum age of same-station weather (minutes)"
+        },
+        "description": "Select the primary forecast product. Current weather uses station observations; daily forecasts additionally use the official 24-hour product. Existing identities are preserved.",
+        "data_description": {
+          "condition_policy": "Strict observation is recommended. Fallback affects the weather entity display only; authoritative observations retain missing values and provenance.",
+          "condition_max_age_minutes": "Used only by last valid observation: 1–120 minutes, default 30, measured from the original observation time. History restarts after HA restart."
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
+      "invalid_data": "CWA returned invalid or incomplete forecast data.",
+      "timeout": "CWA request timed out; try again later.",
+      "tls": "CWA TLS certificate validation failed; inspect integration diagnostics."
+    }
+  },
+  "selector": {
+    "forecast_mode": {
+      "options": {
+        "hourly": "Short-term hourly forecast",
+        "twice_daily": "One-week day/night forecast"
+      }
+    },
+    "condition_policy": {
+      "options": {
+        "strict_observation": "Strict observation (default, recommended)",
+        "last_valid_observation": "Last valid observation from the same station",
+        "forecast_fallback": "Forecast condition for display"
+      }
+    }
+  }
 }

@@ -12,6 +12,8 @@ from .uris import ROOT_WEATHER_API, OBSERVATION_URI, GROUP_OBSERVATIONS_URI, FIN
     BBOX_CITY_URI, THREE_HOURS_FORECAST_URI, DAILY_FORECAST_URI, STATION_WEATHER_HISTORY_URI, ONE_CALL_URI, \
     ONE_CALL_HISTORICAL_URI
 from ..commons.location_tw import LOCATIONS
+from ..utils.cwa_forecast import CwaForecast, parse_forecast
+from ..utils.cwa_location import forecast_type_for_mode, resolve_location
 
 
 class WeatherManager:
@@ -35,6 +37,15 @@ class WeatherManager:
 
     def weather_api_version(self):
         return WEATHER_API_VERSION
+
+    def cwa_forecast(self, location_name: str, mode: str) -> CwaForecast:
+        """Fetch the selected CWA product once, preserving its own time semantics."""
+        forecast_type = forecast_type_for_mode(mode)
+        location = resolve_location(location_name, forecast_type)
+        _, payload = self.http_client.get_json(
+            location.dataset, params={"LocationName": location.name}
+        )
+        return parse_forecast(payload, location.name, forecast_type)
 
     def supported_city(self, location_name):
         """

@@ -1,0 +1,6 @@
+pytest==9.0.3
+pytest-asyncio==1.4.0
+requests==2.34.2
+geojson==3.3.0
+tzdata==2026.3
+importlib-resources==7.1.0; python_version < "3.12"

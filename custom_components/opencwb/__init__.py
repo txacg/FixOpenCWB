@@ -1,117 +1,119 @@
-"""The OpenCWB component."""
-import asyncio
-import logging
+"""OpenCWA integration; historical domain and entity identities are retained."""
 
-from .core.ocwb import OCWB
-from .core.utils.config import get_default_config
+from hashlib import sha256
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONF_API_KEY,
-    CONF_LATITUDE,
-    CONF_LONGITUDE,
-    CONF_MODE,
-    CONF_NAME,
-)
+from homeassistant.const import CONF_API_KEY, CONF_MODE, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt
 
 from .const import (
-    CONF_LANGUAGE,
     CONF_LOCATION_NAME,
-    # CONFIG_FLOW_VERSION,
     DEFAULT_FORECAST_MODE,
-    DEFAULT_LANGUAGE,
     DOMAIN,
     ENTRY_NAME,
     ENTRY_WEATHER_COORDINATOR,
-    # FORECAST_MODE_FREE_DAILY,
-    # FORECAST_MODE_ONECALL_DAILY,
     PLATFORMS,
-    UPDATE_LISTENER,
 )
+from .core.utils.cwa_display import (
+    CONF_CONDITION_MAX_AGE,
+    CONF_CONDITION_POLICY,
+    DEFAULT_CONDITION_MAX_AGE,
+    DEFAULT_CONDITION_POLICY,
+    ObservationWeatherHistory,
+)
+from .repository import CwaRepository
 from .weather_update_coordinator import WeatherUpdateCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the OpenCWB component."""
     hass.data.setdefault(DOMAIN, {})
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
-    """Set up OpenCWB as config entry."""
-    name = config_entry.data[CONF_NAME]
-    api_key = config_entry.data[CONF_API_KEY]
-    location_name = config_entry.data.get(CONF_LOCATION_NAME, None)
-    latitude = config_entry.data.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = config_entry.data.get(CONF_LONGITUDE, hass.config.longitude)
-    forecast_mode = _get_config_value(
-        config_entry, CONF_MODE, DEFAULT_FORECAST_MODE)
-    language = _get_config_value(config_entry, CONF_LANGUAGE, DEFAULT_LANGUAGE)
-
-    config_dict = _get_ocwb_config(language)
-
-    ocwb = OCWB(api_key, config_dict).weather_manager()
-    weather_coordinator = WeatherUpdateCoordinator(
-        ocwb, location_name, latitude, longitude, forecast_mode, hass
+    domain = hass.data.setdefault(DOMAIN, {})
+    pool = domain.setdefault("repositories", {})
+    histories = domain.setdefault("condition_histories", {})
+    for old_key, history in list(histories.items()):
+        history.prune(dt.utcnow())
+        if not history.records and old_key not in pool:
+            histories.pop(old_key)
+    key = sha256(config_entry.data[CONF_API_KEY].encode()).digest()
+    if key not in pool:
+        pool[key] = {
+            "repository": CwaRepository(
+                hass,
+                config_entry.data[CONF_API_KEY],
+                histories.setdefault(key, ObservationWeatherHistory()),
+            ),
+            "users": 0,
+        }
+    shared = pool[key]
+    shared["users"] += 1
+    coordinator = WeatherUpdateCoordinator(
+        shared["repository"],
+        config_entry.data[CONF_LOCATION_NAME],
+        _get_config_value(config_entry, CONF_MODE, DEFAULT_FORECAST_MODE),
+        hass,
+        config_entry,
+        condition_policy=_get_config_value(
+            config_entry, CONF_CONDITION_POLICY, DEFAULT_CONDITION_POLICY
+        ),
+        condition_max_age_minutes=_get_config_value(
+            config_entry, CONF_CONDITION_MAX_AGE, DEFAULT_CONDITION_MAX_AGE
+        ),
     )
-
-    await weather_coordinator.async_config_entry_first_refresh()
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][config_entry.entry_id] = {
-        ENTRY_NAME: name,
-        ENTRY_WEATHER_COORDINATOR: weather_coordinator,
-        CONF_LOCATION_NAME: location_name
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception:
+        # Release ownership when HA retries setup; do not suppress setup failures.
+        await _release(hass, key)
+        raise
+    domain[config_entry.entry_id] = {
+        ENTRY_NAME: config_entry.data[CONF_NAME],
+        ENTRY_WEATHER_COORDINATOR: coordinator,
+        CONF_LOCATION_NAME: config_entry.data[CONF_LOCATION_NAME],
+        "repository_key": key,
     }
+    try:
+        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    except Exception:
+        try:
+            await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+        finally:
+            domain.pop(config_entry.entry_id)
+            await _release(hass, key)
+        raise
+    config_entry.async_on_unload(config_entry.add_update_listener(async_update_options))
+    from .services import async_register
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-
-    update_listener = config_entry.add_update_listener(async_update_options)
-    hass.data[DOMAIN][config_entry.entry_id][UPDATE_LISTENER] = update_listener
-
+    async_register(hass)
     return True
 
 
-async def async_update_options(hass: HomeAssistant, config_entry: ConfigEntry):
-    """Update options."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+async def _release(hass, key):
+    pool = hass.data[DOMAIN]["repositories"]
+    shared = pool[key]
+    shared["users"] -= 1
+    if shared["users"] == 0:
+        pool.pop(key)
+        await shared["repository"].cache.close()
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
-    """Unload a config entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(
-                    config_entry, platform)
-                for platform in PLATFORMS
-            ]
-        )
-    )
-    if unload_ok:
-        update_listener = hass.data[
-            DOMAIN][config_entry.entry_id][UPDATE_LISTENER]
-        update_listener()
-        hass.data[DOMAIN].pop(config_entry.entry_id)
-
-    return unload_ok
+async def async_update_options(hass, entry):
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
-def _filter_domain_configs(elements, domain):
-    return list(filter(lambda elem: elem["platform"] == domain, elements))
+async def async_unload_entry(hass, entry):
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
+    runtime = hass.data[DOMAIN].pop(entry.entry_id)
+    await _release(hass, runtime["repository_key"])
+    if not hass.data[DOMAIN]["repositories"]:
+        hass.services.async_remove(DOMAIN, "get_weather")
+    return True
 
 
 def _get_config_value(config_entry, key, default):
-    if config_entry.options:
-        return config_entry.options.get(key, default)
-    return config_entry.data.get(key, default)
-
-
-def _get_ocwb_config(language):
-    """Get OpenWeatherMap configuration and add language to it."""
-    config_dict = get_default_config()
-    config_dict["language"] = language
-    return config_dict
+    return config_entry.options.get(key, config_entry.data.get(key, default))

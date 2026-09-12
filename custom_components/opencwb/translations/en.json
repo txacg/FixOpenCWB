@@ -1,37 +1,83 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Location is already configured"
-        },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_api_key": "Invalid API key",
-			"invalid_location_name": "Invalid Location Name"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "api_key": "API Key",
-                    "language": "Language",
-                    "location_name": "Location Name",
-                    "latitude": "Latitude",
-                    "longitude": "Longitude",
-                    "mode": "Mode",
-                    "name": "Name of the integration"
-                },
-                "description": "Set up OpenCWB integration. To generate API key go to https://opendata.cwa.gov.tw/devManual/insrtuction. About Location Name, please check https://opendata.cwa.gov.tw/opendatadoc/Opendata_City.pdf",
-                "title": "OpenCWB"
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Location is already configured",
+      "reauth_successful": "API key updated successfully."
     },
-    "options": {
-        "step": {
-            "init": {
-                "data": {
-                    "language": "Language",
-                    "mode": "Mode"
-                }
-            }
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_api_key": "Invalid API key",
+      "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
+      "invalid_data": "CWA returned invalid or incomplete forecast data.",
+      "timeout": "CWA request timed out; try again later.",
+      "tls": "CWA TLS certificate validation failed; inspect integration diagnostics."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "API Key",
+          "language": "Language",
+          "location_name": "County/city or township",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "mode": "Mode",
+          "name": "Name of the integration",
+          "condition_policy": "Current condition display policy",
+          "condition_max_age_minutes": "Maximum age of same-station weather (minutes)"
+        },
+        "description": "Set up CWA open data. Weekly forecasts contain separate daytime and nighttime periods.",
+        "title": "OpenCWA",
+        "data_description": {
+          "condition_policy": "Strict observation is recommended. Fallback affects the weather entity display only; authoritative observations retain missing values and provenance.",
+          "condition_max_age_minutes": "Used only by last valid observation: 1–120 minutes, default 30, measured from the original observation time. History restarts after HA restart."
         }
+      },
+      "reauth_confirm": {
+        "title": "Update CWA API key",
+        "data": {
+          "api_key": "API key"
+        }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "language": "Language",
+          "mode": "Mode",
+          "condition_policy": "Current condition display policy",
+          "condition_max_age_minutes": "Maximum age of same-station weather (minutes)"
+        },
+        "description": "Select the primary forecast product. Current weather uses station observations; daily forecasts additionally use the official 24-hour product. Existing identities are preserved.",
+        "data_description": {
+          "condition_policy": "Strict observation is recommended. Fallback affects the weather entity display only; authoritative observations retain missing values and provenance.",
+          "condition_max_age_minutes": "Used only by last valid observation: 1–120 minutes, default 30, measured from the original observation time. History restarts after HA restart."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_api_key": "Invalid API key",
+      "invalid_location_name": "Enter a valid location; include the county/city for ambiguous names.",
+      "invalid_data": "CWA returned invalid or incomplete forecast data.",
+      "timeout": "CWA request timed out; try again later.",
+      "tls": "CWA TLS certificate validation failed; inspect integration diagnostics."
+    }
+  },
+  "selector": {
+    "forecast_mode": {
+      "options": {
+        "hourly": "Short-term hourly forecast",
+        "twice_daily": "One-week day/night forecast"
+      }
+    },
+    "condition_policy": {
+      "options": {
+        "strict_observation": "Strict observation (default, recommended)",
+        "last_valid_observation": "Last valid observation from the same station",
+        "forecast_fallback": "Forecast condition for display"
+      }
+    }
+  }
 }

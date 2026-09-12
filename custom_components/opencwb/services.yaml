@@ -1,0 +1,26 @@
+get_weather:
+  name: Get CWA weather
+  description: Return normalized observations and forecasts with station, source and freshness information.
+  fields:
+    entity_id:
+      name: Weather entity
+      required: true
+      selector:
+        entity:
+          filter:
+            - domain: weather
+              integration: opencwb
+    forecast_type:
+      name: Forecast type
+      default: all
+      selector:
+        select:
+          options: [all, none, hourly, twice_daily, daily]
+    count:
+      name: Maximum periods per forecast type
+      default: 6
+      selector:
+        number:
+          min: 1
+          max: 24
+          mode: box
